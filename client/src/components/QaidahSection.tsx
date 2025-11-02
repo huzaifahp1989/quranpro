@@ -208,27 +208,59 @@ const tajweedRules: TajweedRule[] = [
 export function QaidahSection() {
   const [selectedLetter, setSelectedLetter] = useState<ArabicLetter | null>(null);
   const [selectedRule, setSelectedRule] = useState<TajweedRule | null>(null);
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+
+  // Load available voices
+  useEffect(() => {
+    if ('speechSynthesis' in window) {
+      const loadVoices = () => {
+        const availableVoices = window.speechSynthesis.getVoices();
+        setVoices(availableVoices);
+      };
+
+      loadVoices();
+      window.speechSynthesis.onvoiceschanged = loadVoices;
+
+      return () => {
+        window.speechSynthesis.cancel();
+      };
+    }
+  }, []);
 
   const speak = (text: string, lang: string = 'ar-SA') => {
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
+      
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = lang;
       utterance.rate = 0.7;
+      utterance.pitch = 0.9; // Slightly lower pitch for male voice
+
+      // Try to find a male Arabic voice
+      const arabicVoices = voices.filter(voice => 
+        voice.lang.startsWith('ar') || voice.lang === 'ar-SA'
+      );
+      
+      // Prefer male voices (names often contain "Male" or specific male voice names)
+      const maleVoice = arabicVoices.find(voice => 
+        voice.name.toLowerCase().includes('male') ||
+        voice.name.toLowerCase().includes('majed') ||
+        voice.name.toLowerCase().includes('maged') ||
+        !voice.name.toLowerCase().includes('female')
+      );
+
+      if (maleVoice) {
+        utterance.voice = maleVoice;
+      } else if (arabicVoices.length > 0) {
+        // Use first available Arabic voice
+        utterance.voice = arabicVoices[0];
+      }
+
       window.speechSynthesis.speak(utterance);
     } else {
       console.warn('Web Speech API is not supported in this browser');
     }
   };
-
-  // Cleanup speech on unmount
-  useEffect(() => {
-    return () => {
-      if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-      }
-    };
-  }, []);
 
   return (
     <div className="space-y-6">
@@ -254,7 +286,7 @@ export function QaidahSection() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-4">
                 {arabicAlphabet.map((letter, index) => (
                   <Card
                     key={`${letter.arabic}-${index}`}
@@ -265,10 +297,10 @@ export function QaidahSection() {
                     }}
                     data-testid={`letter-${letter.name.toLowerCase()}-${letter.transliteration.toLowerCase()}`}
                   >
-                    <CardContent className="p-4 text-center">
+                    <CardContent className="p-4 text-center space-y-2">
                       <div className="text-4xl font-arabic mb-2">{letter.arabic}</div>
-                      <div className="text-sm font-semibold">{letter.name}</div>
-                      <div className="text-xs text-muted-foreground">{letter.transliteration}</div>
+                      <div className="text-sm font-semibold break-words">{letter.name}</div>
+                      <div className="text-xs text-muted-foreground break-words">{letter.transliteration}</div>
                       <Button
                         size="icon"
                         variant="ghost"
