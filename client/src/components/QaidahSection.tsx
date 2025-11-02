@@ -329,14 +329,16 @@ export function QaidahSection() {
                     }}
                     data-testid={`letter-${letter.name.toLowerCase()}-${letter.transliteration.toLowerCase()}`}
                   >
-                    <CardContent className="p-4 text-center space-y-2">
-                      <div className="text-4xl font-arabic mb-2">{letter.arabic}</div>
-                      <div className="text-sm font-semibold break-words">{letter.name}</div>
-                      <div className="text-xs text-muted-foreground break-words">{letter.transliteration}</div>
+                    <CardContent className="p-4 text-center flex flex-col items-center gap-3 min-h-[140px]">
+                      <div className="text-4xl font-arabic leading-none">{letter.arabic}</div>
+                      <div className="flex flex-col gap-1 w-full">
+                        <div className="text-sm font-semibold break-words px-1">{letter.name}</div>
+                        <div className="text-xs text-muted-foreground break-words px-1">{letter.transliteration}</div>
+                      </div>
                       <Button
                         size="icon"
                         variant="ghost"
-                        className="mt-2 h-6 w-6"
+                        className="h-7 w-7 flex-shrink-0"
                         onClick={(e) => {
                           e.stopPropagation();
                           speak(letter.arabic);
@@ -344,7 +346,7 @@ export function QaidahSection() {
                         aria-label={`Hear pronunciation of ${letter.name}`}
                         data-testid={`button-speak-${letter.name.toLowerCase()}-${letter.transliteration.toLowerCase()}`}
                       >
-                        <Volume2 className="w-3 h-3" />
+                        <Volume2 className="w-4 h-4" />
                       </Button>
                     </CardContent>
                   </Card>
