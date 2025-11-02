@@ -51,7 +51,7 @@ const learningSections: LearningSection[] = [
 
 const reciters = [
   { id: "ar.minshawi", name: "Mohamed Siddiq al-Minshawi (Murattal)", shortName: "Minshawi" },
-  { id: "ar.huzaify", name: "Ali Bin Abdur-Rahman Al-Huthaify", shortName: "Huzaify" },
+  { id: "ar.hudhaify", name: "Ali Bin Abdur-Rahman Al-Hudhaify", shortName: "Hudhaify" },
 ];
 
 export default function KidsLearning() {
@@ -171,20 +171,27 @@ export default function KidsLearning() {
     handleStop();
   };
 
+  const handleVerseSelect = (verseNumber: string) => {
+    const verseIndex = parseInt(verseNumber) - 1;
+    if (verseIndex >= 0 && verses && verseIndex < verses.length) {
+      setCurrentVerseIndex(verseIndex);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <audio ref={audioRef} preload="auto" />
       
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
-        <div className="max-w-6xl mx-auto px-6 py-4">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
           <div className="flex items-center justify-between gap-4 mb-4">
             <div className="flex items-center gap-3">
               <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10">
                 <BookOpen className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <h1 className="text-xl font-semibold">Learn Quran for Kids</h1>
-                <p className="text-sm text-muted-foreground">Listen, Learn, and Repeat</p>
+                <h1 className="text-lg sm:text-xl font-semibold">Learn Quran for Kids</h1>
+                <p className="text-xs sm:text-sm text-muted-foreground hidden sm:block">Listen, Learn, and Repeat</p>
               </div>
             </div>
             <Link href="/">
@@ -198,7 +205,7 @@ export default function KidsLearning() {
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-6 py-8">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         <Tabs value={selectedSection} onValueChange={handleSectionChange} className="mb-8">
           <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 mb-6">
             {learningSections.map(section => (
@@ -219,7 +226,7 @@ export default function KidsLearning() {
                   <CardDescription>{section.description}</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex flex-col gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="text-sm font-medium mb-2 block">Select Reciter</label>
                       <Select value={selectedReciter} onValueChange={setSelectedReciter}>
@@ -235,6 +242,26 @@ export default function KidsLearning() {
                         </SelectContent>
                       </Select>
                     </div>
+                    {verses && verses.length > 0 && (
+                      <div>
+                        <label className="text-sm font-medium mb-2 block">Jump to Verse</label>
+                        <Select 
+                          value={(currentVerseIndex + 1).toString()} 
+                          onValueChange={handleVerseSelect}
+                        >
+                          <SelectTrigger data-testid="select-verse">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {verses.map((verse, index) => (
+                              <SelectItem key={index} value={(index + 1).toString()}>
+                                Verse {verse.ayah.numberInSurah}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -256,7 +283,7 @@ export default function KidsLearning() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="text-center font-arabic text-4xl leading-loose mb-6" dir="rtl">
+                <div className="text-center font-arabic text-3xl sm:text-4xl leading-loose mb-6 px-2" dir="rtl">
                   {currentVerse.ayah.text}
                 </div>
                 
@@ -281,54 +308,63 @@ export default function KidsLearning() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="flex items-center justify-center gap-4">
-                  <Button
-                    size="lg"
-                    variant="outline"
-                    onClick={handlePreviousVerse}
-                    disabled={currentSurahIndex === 0 && currentVerseIndex === 0}
-                    data-testid="button-previous-verse"
-                  >
-                    Previous
-                  </Button>
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
+                  <div className="flex items-center gap-3 w-full sm:w-auto justify-center">
+                    <Button
+                      size="default"
+                      variant="outline"
+                      onClick={handlePreviousVerse}
+                      disabled={currentSurahIndex === 0 && currentVerseIndex === 0}
+                      data-testid="button-previous-verse"
+                      className="flex-1 sm:flex-initial"
+                    >
+                      Previous
+                    </Button>
+                    
+                    <Button
+                      size="icon"
+                      onClick={handlePlayPause}
+                      data-testid="button-play-pause"
+                      className="h-12 w-12"
+                    >
+                      {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6" />}
+                    </Button>
+                    
+                    <Button
+                      size="default"
+                      variant="outline"
+                      onClick={handleNextVerse}
+                      disabled={currentSection && currentSurahIndex === currentSection.surahs.length - 1 && verses && currentVerseIndex === verses.length - 1}
+                      data-testid="button-next-verse"
+                      className="flex-1 sm:flex-initial"
+                    >
+                      Next
+                    </Button>
+                  </div>
                   
-                  <Button
-                    size="lg"
-                    onClick={handlePlayPause}
-                    data-testid="button-play-pause"
-                  >
-                    {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6" />}
-                  </Button>
-                  
-                  <Button
-                    size="lg"
-                    variant="outline"
-                    onClick={handleStop}
-                    data-testid="button-stop"
-                  >
-                    Stop
-                  </Button>
-                  
-                  <Button
-                    size="lg"
-                    variant={isRepeating ? "default" : "outline"}
-                    onClick={handleRepeatToggle}
-                    data-testid="button-repeat"
-                    aria-pressed={isRepeating}
-                    aria-label={isRepeating ? "Disable repeat mode" : "Enable repeat mode"}
-                  >
-                    <RotateCcw className="w-6 h-6" />
-                  </Button>
-                  
-                  <Button
-                    size="lg"
-                    variant="outline"
-                    onClick={handleNextVerse}
-                    disabled={currentSection && currentSurahIndex === currentSection.surahs.length - 1 && verses && currentVerseIndex === verses.length - 1}
-                    data-testid="button-next-verse"
-                  >
-                    Next
-                  </Button>
+                  <div className="flex items-center gap-3 w-full sm:w-auto justify-center">
+                    <Button
+                      size="default"
+                      variant="outline"
+                      onClick={handleStop}
+                      data-testid="button-stop"
+                      className="flex-1 sm:flex-initial"
+                    >
+                      Stop
+                    </Button>
+                    
+                    <Button
+                      size="icon"
+                      variant={isRepeating ? "default" : "outline"}
+                      onClick={handleRepeatToggle}
+                      data-testid="button-repeat"
+                      aria-pressed={isRepeating}
+                      aria-label={isRepeating ? "Disable repeat mode" : "Enable repeat mode"}
+                      className="h-12 w-12"
+                    >
+                      <RotateCcw className="w-6 h-6" />
+                    </Button>
+                  </div>
                 </div>
 
                 <div className="space-y-2">

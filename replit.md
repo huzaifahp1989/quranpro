@@ -14,11 +14,13 @@ A comprehensive Quran reading application with audio recitation, Urdu and Englis
   - Surah Yasin (The Heart of the Quran)
   - Surah Al-Mulk (Protection from Grave Punishment)
   - Surah Al-Waqiah (The Inevitable Event)
-  - Audio from Sheikh Minshawi and Sheikh Huzaify
+  - Audio from Sheikh Minshawi and Sheikh Hudhaify
+  - Verse selection dropdown for quick navigation
   - Repeat mode for verse practice
   - Play/Pause/Stop controls
   - Volume adjustment
   - Side-by-side Urdu and English translations
+  - Mobile-responsive design
 - **Dark Mode**: Full dark mode support with theme persistence
 - **Responsive Design**: Mobile-first design with tablet and desktop optimization
 
@@ -89,7 +91,7 @@ A comprehensive Quran reading application with audio recitation, Urdu and Englis
     - `ar.alafasy` - Audio by Mishary Alafasy
     - `ar.abdulbasitmurattal` - Audio by Abdul Basit
     - `ar.minshawi` - Audio by Mohamed Siddiq al-Minshawi (Murattal)
-    - `ar.huzaify` - Audio by Ali Bin Abdur-Rahman Al-Huthaify
+    - `ar.hudhaify` - Audio by Ali Bin Abdur-Rahman Al-Hudhaify
     - `ur.jalandhry` - Urdu translation
     - `en.sahih` - English translation (Sahih International)
 
@@ -139,11 +141,13 @@ A comprehensive Quran reading application with audio recitation, Urdu and Englis
   - Created dedicated /kids route with tabbed interface
   - Implemented audio player with repeat mode, stop, and volume controls
   - Added 4 learning sections: Juz Amma (30th Part), Surah Yasin, Surah Al-Mulk, Surah Al-Waqiah
-  - Integrated Sheikh Minshawi and Sheikh Huzaify audio reciters
+  - Integrated Sheikh Minshawi and Sheikh Hudhaify audio reciters
   - Verse navigation with previous/next controls
+  - **Verse selection dropdown** - Jump directly to any verse in the current surah
   - Side-by-side translations (Urdu and English) for learning
   - Auto-advance to next verse when not in repeat mode
   - Added navigation buttons across all pages for easy access
+  - **Mobile responsive design** - Optimized layout for mobile devices with stacked controls
 - ✅ **Database Setup Complete** - PostgreSQL with Drizzle ORM (Task 2)
   - Created users, bookmarks, reading_position, user_preferences tables
   - Implemented DatabaseStorage with full CRUD operations
@@ -184,15 +188,17 @@ A comprehensive Quran reading application with audio recitation, Urdu and Englis
 ### Kids Learning
 1. Click "Kids Learning" button in the header to access the learning section
 2. Choose from tabs: Juz Amma, Surah Yasin, Surah Al-Mulk, or Surah Al-Waqiah
-3. Select your preferred reciter (Sheikh Minshawi or Sheikh Huzaify)
-4. Each verse displays Arabic text with Urdu and English translations
-5. Audio controls:
+3. Select your preferred reciter (Sheikh Minshawi or Sheikh Hudhaify)
+4. Use the "Jump to Verse" dropdown to quickly navigate to any verse in the current surah
+5. Each verse displays Arabic text with Urdu and English translations
+6. Audio controls (responsive on mobile):
    - **Play/Pause**: Start or pause recitation
    - **Stop**: Stop playback and reset to beginning
    - **Repeat**: Toggle repeat mode to practice the same verse
    - **Previous/Next**: Navigate between verses
    - **Volume**: Adjust audio volume with slider
-6. Audio automatically advances to the next verse unless repeat mode is on
+7. Audio automatically advances to the next verse unless repeat mode is on
+8. Mobile-optimized layout with stacked controls for easy use on phones and tablets
 
 ### Dark Mode
 - Click the sun/moon icon in the header to toggle between light and dark themes
