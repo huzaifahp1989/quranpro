@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Slider } from "@/components/ui/slider";
 import { VerseWithTranslations } from "@shared/schema";
 import { Skeleton } from "@/components/ui/skeleton";
+import { QaidahSection } from "@/components/QaidahSection";
 
 interface LearningSection {
   id: string;
@@ -62,6 +63,7 @@ export default function KidsLearning() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isRepeating, setIsRepeating] = useState(false);
   const [volume, setVolume] = useState([80]);
+  const [mainTab, setMainTab] = useState<string>("quran");
   const audioRef = useRef<HTMLAudioElement>(null);
 
   const currentSection = learningSections.find(s => s.id === selectedSection);
@@ -69,7 +71,7 @@ export default function KidsLearning() {
 
   const { data: verses, isLoading } = useQuery<VerseWithTranslations[]>({
     queryKey: ['/api/surah', currentSurahNumber, selectedReciter],
-    enabled: !!currentSurahNumber,
+    enabled: !!currentSurahNumber && mainTab === "quran",
   });
 
   const currentVerse = verses?.[currentVerseIndex];
@@ -206,14 +208,25 @@ export default function KidsLearning() {
       </header>
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-        <Tabs value={selectedSection} onValueChange={handleSectionChange} className="mb-8">
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 mb-6">
-            {learningSections.map(section => (
-              <TabsTrigger key={section.id} value={section.id} data-testid={`tab-${section.id}`}>
-                {section.name}
-              </TabsTrigger>
-            ))}
+        <Tabs value={mainTab} onValueChange={setMainTab} className="mb-8">
+          <TabsList className="grid w-full grid-cols-2 mb-6">
+            <TabsTrigger value="quran" data-testid="tab-main-quran">
+              Quran Recitation
+            </TabsTrigger>
+            <TabsTrigger value="qaidah" data-testid="tab-main-qaidah">
+              Qaidah & Arabic
+            </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="quran">
+            <Tabs value={selectedSection} onValueChange={handleSectionChange} className="mb-8">
+              <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 mb-6">
+                {learningSections.map(section => (
+                  <TabsTrigger key={section.id} value={section.id} data-testid={`tab-${section.id}`}>
+                    {section.name}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
 
           {learningSections.map(section => (
             <TabsContent key={section.id} value={section.id}>
@@ -267,9 +280,9 @@ export default function KidsLearning() {
               </Card>
             </TabsContent>
           ))}
-        </Tabs>
+          </Tabs>
 
-        {isLoading ? (
+          {isLoading ? (
           <div className="space-y-4">
             <Skeleton className="h-48 w-full" />
             <Skeleton className="h-24 w-full" />
@@ -398,6 +411,12 @@ export default function KidsLearning() {
             <p className="text-muted-foreground">Loading verses...</p>
           </div>
         )}
+        </TabsContent>
+
+          <TabsContent value="qaidah">
+            <QaidahSection />
+          </TabsContent>
+        </Tabs>
       </main>
     </div>
   );

@@ -10,17 +10,35 @@ A comprehensive Quran reading application with audio recitation, Urdu and Englis
 - **Tafseer**: Verse-by-verse Islamic commentary with expandable panel
 - **Hadith Collection**: Browse authentic Hadith from Sahih al-Bukhari and Sahih Muslim
 - **Kids Learning Section**: Interactive Quran learning for children with:
-  - Juz Amma (30th Part - Surahs 78-114)
-  - Surah Yasin (The Heart of the Quran)
-  - Surah Al-Mulk (Protection from Grave Punishment)
-  - Surah Al-Waqiah (The Inevitable Event)
-  - Audio from Sheikh Minshawi and Sheikh Hudhaify
-  - Verse selection dropdown for quick navigation
-  - Repeat mode for verse practice
-  - Play/Pause/Stop controls
-  - Volume adjustment
-  - Side-by-side Urdu and English translations
-  - Mobile-responsive design
+  - **Quran Recitation** (with audio player and controls):
+    - Juz Amma (30th Part - Surahs 78-114)
+    - Surah Yasin (The Heart of the Quran)
+    - Surah Al-Mulk (Protection from Grave Punishment)
+    - Surah Al-Waqiah (The Inevitable Event)
+    - Audio from Sheikh Minshawi and Sheikh Hudhaify
+    - Verse selection dropdown for quick navigation
+    - Repeat mode for verse practice
+    - Play/Pause/Stop controls
+    - Volume adjustment
+    - Side-by-side Urdu and English translations
+  - **Qaidah & Arabic Learning**:
+    - **Arabic Alphabet (Alif Baa)**: 28 letters with pronunciation guide
+      - Each letter shows: Arabic character, name, transliteration
+      - Four position forms: Isolated, Initial, Medial, Final
+      - Text-to-speech pronunciation using Web Speech API
+      - Detailed pronunciation descriptions
+    - **Tajweed Rules**: 8 comprehensive categories with Quranic examples
+      - Noon Sakinah & Tanween (Idhaar, Idghaam, Iqlaab, Ikhfaa)
+      - Meem Sakinah rules (Ikhfaa Shafawi, Idghaam Shafawi, Idhaar)
+      - Madd (Prolongation) - 5 types with examples
+      - Qalqalah (Echoing Sound) - ق ط ب ج د
+      - Ghunnah (Nasal Sound)
+      - Raa' (Heavy & Light pronunciation)
+      - Laam of Allah's Name
+      - Sifaat (Characteristics of Letters)
+      - Each rule includes: Arabic title, description, key points, Quranic examples
+      - Examples with audio pronunciation, transliteration, and translation
+  - Mobile-responsive design across all sections
 - **Dark Mode**: Full dark mode support with theme persistence
 - **Responsive Design**: Mobile-first design with tablet and desktop optimization
 
@@ -137,8 +155,24 @@ A comprehensive Quran reading application with audio recitation, Urdu and Englis
 - Consistent gap between elements (gap-3, gap-4)
 
 ## Recent Changes (November 2025)
+- ✅ **Qaidah & Arabic Learning Section Added** (Latest)
+  - Comprehensive Arabic alphabet learning (Alif Baa)
+    - 28 letters with detailed information
+    - Four position forms for each letter
+    - Pronunciation guide with transliteration
+    - Text-to-speech audio using Web Speech API
+  - Complete Tajweed rules curriculum
+    - 8 major rule categories with descriptions
+    - Multiple authentic Quranic examples for each rule
+    - Key points and detailed explanations
+    - Audio pronunciation for all examples
+  - Accessibility features: aria-labels, test IDs, keyboard navigation
+  - Speech synthesis cleanup on unmount
+  - Mobile-responsive grid layouts
 - ✅ **Kids Learning Section Added** - Interactive Quran learning page for children
-  - Created dedicated /kids route with tabbed interface
+  - Created dedicated /kids route with two-level tabbed interface
+  - **Quran Recitation tab**: Audio learning with 4 sections
+  - **Qaidah & Arabic tab**: Alphabet and Tajweed education
   - Implemented audio player with repeat mode, stop, and volume controls
   - Added 4 learning sections: Juz Amma (30th Part), Surah Yasin, Surah Al-Mulk, Surah Al-Waqiah
   - Integrated Sheikh Minshawi and Sheikh Hudhaify audio reciters
@@ -187,18 +221,41 @@ A comprehensive Quran reading application with audio recitation, Urdu and Englis
 
 ### Kids Learning
 1. Click "Kids Learning" button in the header to access the learning section
-2. Choose from tabs: Juz Amma, Surah Yasin, Surah Al-Mulk, or Surah Al-Waqiah
-3. Select your preferred reciter (Sheikh Minshawi or Sheikh Hudhaify)
-4. Use the "Jump to Verse" dropdown to quickly navigate to any verse in the current surah
-5. Each verse displays Arabic text with Urdu and English translations
-6. Audio controls (responsive on mobile):
+2. Choose between two main tabs:
+   - **Quran Recitation**: Interactive audio learning
+   - **Qaidah & Arabic**: Alphabet and Tajweed rules
+
+#### Quran Recitation Tab
+1. Choose from sub-tabs: Juz Amma, Surah Yasin, Surah Al-Mulk, or Surah Al-Waqiah
+2. Select your preferred reciter (Sheikh Minshawi or Sheikh Hudhaify)
+3. Use the "Jump to Verse" dropdown to quickly navigate to any verse in the current surah
+4. Each verse displays Arabic text with Urdu and English translations
+5. Audio controls (responsive on mobile):
    - **Play/Pause**: Start or pause recitation
    - **Stop**: Stop playback and reset to beginning
    - **Repeat**: Toggle repeat mode to practice the same verse
    - **Previous/Next**: Navigate between verses
    - **Volume**: Adjust audio volume with slider
-7. Audio automatically advances to the next verse unless repeat mode is on
-8. Mobile-optimized layout with stacked controls for easy use on phones and tablets
+6. Audio automatically advances to the next verse unless repeat mode is on
+7. Mobile-optimized layout with stacked controls for easy use on phones and tablets
+
+#### Qaidah & Arabic Tab
+1. **Arabic Alphabet (Alif Baa)**:
+   - Browse all 28 Arabic letters in a responsive grid
+   - Click any letter to see detailed information
+   - View four position forms (Isolated, Initial, Medial, Final)
+   - Click speaker icon to hear pronunciation
+   - Learn transliteration and pronunciation guide
+2. **Tajweed Rules**:
+   - Explore 8 major Tajweed categories
+   - Click any rule to expand and see details
+   - View key points for each rule
+   - Study authentic Quranic examples with:
+     - Arabic text (with audio pronunciation)
+     - Transliteration
+     - English translation
+     - Quranic reference
+   - Interactive expandable cards for easy learning
 
 ### Dark Mode
 - Click the sun/moon icon in the header to toggle between light and dark themes
