@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { pgTable, serial, varchar, integer, timestamp, index, uniqueIndex } from "drizzle-orm/pg-core";
+import { createInsertSchema } from "drizzle-zod";
 
 // Surah (Chapter) Schema
 export const surahSchema = z.object({
@@ -121,3 +123,64 @@ export const translationIdentifiers = {
   urdu: "ur.jalandhry", // Fateh Muhammad Jalandhry
   english: "en.sahih", // Sahih International
 };
+
+// ============================================================================
+// Database Tables (Drizzle ORM)
+// ============================================================================
+
+// Users table (for tracking anonymous and authenticated users)
+export const users = pgTable("users", {
+  id: serial("id").primaryKey(),
+  sessionId: varchar("session_id", { length: 255 }).notNull().unique(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true });
+export type InsertUser = z.infer<typeof insertUserSchema>;
+export type User = typeof users.$inferSelect;
+
+// Bookmarks table
+export const bookmarks = pgTable("bookmarks", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  surahNumber: integer("surah_number").notNull(),
+  ayahNumber: integer("ayah_number").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  userIdIdx: index("bookmarks_user_id_idx").on(table.userId),
+  userSurahAyahUnique: uniqueIndex("bookmarks_user_surah_ayah_unique").on(table.userId, table.surahNumber, table.ayahNumber),
+}));
+
+export const insertBookmarkSchema = createInsertSchema(bookmarks).omit({ id: true, createdAt: true });
+export type InsertBookmark = z.infer<typeof insertBookmarkSchema>;
+export type Bookmark = typeof bookmarks.$inferSelect;
+
+// Reading position table (one per user)
+export const readingPosition = pgTable("reading_position", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull().unique(),
+  surahNumber: integer("surah_number").notNull(),
+  ayahNumber: integer("ayah_number").notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  userIdIdx: index("reading_position_user_id_idx").on(table.userId),
+}));
+
+export const insertReadingPositionSchema = createInsertSchema(readingPosition).omit({ id: true, updatedAt: true });
+export type InsertReadingPosition = z.infer<typeof insertReadingPositionSchema>;
+export type ReadingPosition = typeof readingPosition.$inferSelect;
+
+// User preferences table
+export const userPreferences = pgTable("user_preferences", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull().unique(),
+  reciterIdentifier: varchar("reciter_identifier", { length: 100 }).default("ar.alafasy").notNull(),
+  theme: varchar("theme", { length: 20 }).default("light").notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  userIdIdx: index("user_preferences_user_id_idx").on(table.userId),
+}));
+
+export const insertUserPreferencesSchema = createInsertSchema(userPreferences).omit({ id: true, updatedAt: true });
+export type InsertUserPreferences = z.infer<typeof insertUserPreferencesSchema>;
+export type UserPreferences = typeof userPreferences.$inferSelect;

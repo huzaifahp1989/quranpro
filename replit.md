@@ -48,9 +48,11 @@ A comprehensive Quran reading application with audio recitation, Urdu and Englis
 - `GET /api/tafseer/:surahNumber/:ayahNumber` - Fetch Tafseer for specific verse
 
 ### Hadith Endpoints
-- `GET /api/hadiths/:collection?search=query` - Fetch hadiths from specified collection
-  - Collections: "bukhari", "muslim"
-  - Optional search parameter for filtering
+- `GET /api/hadiths/:collection?page=1&search=query` - Fetch hadiths from specified collection
+  - Collections: "bukhari", "muslim", "abudawud", "tirmidhi", "ibnmajah", "nasai", "malik" (7 total)
+  - Pagination: 20 hadiths per page
+  - Optional search parameter for client-side filtering
+  - Response includes: hadiths array, page, pageSize, hasMore, total
 
 ## External APIs Used
 
@@ -75,9 +77,21 @@ A comprehensive Quran reading application with audio recitation, Urdu and Englis
     - ID 1: التفسير الميسر (Al-Tafsir Al-Muyassar)
     - ID 2: تفسير الجلالين (Tafsir al-Jalalayn)
 
-### 3. Hadith APIs
-- Using open APIs for Sahih Bukhari and Muslim collections
-- Endpoints to be configured in backend
+### 3. Hadith API (fawazahmed0 CDN)
+- Using fawazahmed0/hadith-api via CDN
+- CDN: https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1/
+- No authentication required
+- Collections available (English editions):
+  - eng-bukhari (Sahih al-Bukhari) - 7,563 hadiths
+  - eng-muslim (Sahih Muslim) - 7,190 hadiths
+  - eng-abudawud (Sunan Abu Dawud) - 5,274 hadiths
+  - eng-tirmidhi (Jami' At-Tirmidhi) - 3,956 hadiths
+  - eng-ibnmajah (Sunan Ibn Majah) - 4,341 hadiths
+  - eng-nasai (Sunan an-Nasa'i) - 5,758 hadiths
+  - eng-malik (Muwatta Malik) - 1,826 hadiths
+- Backend caches entire collections (1-hour TTL)
+- Client-side pagination (20 per page)
+- Search filters hadiths client-side after fetching collection
 
 ## Design System
 
@@ -96,9 +110,15 @@ A comprehensive Quran reading application with audio recitation, Urdu and Englis
 - Clear verse separation (mb-6)
 - Consistent gap between elements (gap-3, gap-4)
 
-## Recent Changes
+## Recent Changes (November 2025)
+- ✅ **Real Hadith API Integration Complete** - Integrated fawazahmed0 CDN API with 7 authentic Hadith collections
+  - Replaced hardcoded data with real API integration
+  - Implemented pagination with accumulation (20 hadiths per page, Load More button)
+  - Added search functionality with proper state management
+  - Fixed critical bugs: TypeScript compilation, search pagination, grade serialization
+  - Comprehensive e2e testing validates all features
 - Initial project setup with fullstack TypeScript structure
-- Implemented complete frontend with all core features
+- Implemented complete frontend with all core features (Quran reader, audio player, translations, tafseer)
 - Added dark mode support with theme persistence
 - Created beautiful, accessible UI following Islamic design principles
 - Integrated Arabic fonts for authentic Quranic text rendering
@@ -106,7 +126,6 @@ A comprehensive Quran reading application with audio recitation, Urdu and Englis
 - Added audio synchronization with automatic verse advancement during playback
 - Implemented robust error handling with input validation and timeout management
 - Optimized layout for better reading experience with reduced spacing and compact design
-- Fixed audio auto-play to maintain continuous recitation across verses
 
 ## User Guide
 ### Reading the Quran
@@ -118,9 +137,11 @@ A comprehensive Quran reading application with audio recitation, Urdu and Englis
 
 ### Browsing Hadith
 1. Click the book icon button (bottom left) to navigate to Hadith collection
-2. Choose between Sahih al-Bukhari or Sahih Muslim
-3. Use the search box to find specific hadiths
-4. View Arabic text with English and Urdu translations
+2. Choose from 7 authentic collections via tabs (Sahih Bukhari, Muslim, Abu Dawud, Tirmidhi, Ibn Majah, Nasa'i, Muwatta Malik)
+3. Browse hadiths with English translations (20 per page)
+4. Click "Load More Hadiths" to load additional pages
+5. Use the search box to filter hadiths by keywords
+6. Each hadith shows: collection badge, hadith number, English narration, and reference
 
 ### Dark Mode
 - Click the sun/moon icon in the header to toggle between light and dark themes
