@@ -22,10 +22,13 @@ A comprehensive Quran reading application with audio recitation, Urdu and Englis
     - Volume adjustment
     - Side-by-side Urdu and English translations
   - **Qaidah & Arabic Learning**:
-    - **Arabic Alphabet (Alif Baa)**: 28 letters with pronunciation guide
+    - **Arabic Alphabet (Alif Baa)**: 28 letters with authentic pronunciation
       - Each letter shows: Arabic character, name, transliteration
       - Four position forms: Isolated, Initial, Medial, Final
-      - Text-to-speech pronunciation using Web Speech API
+      - **Authentic male voice pronunciation** using pre-recorded audio
+      - Audio extracted from user-provided Lesson 1 video
+      - 28 individual letter audio files (3.2 seconds each)
+      - Click speaker icon to hear clear, professional pronunciation
       - Detailed pronunciation descriptions
     - **Tajweed Rules**: 8 comprehensive categories with Quranic examples
       - Noon Sakinah & Tanween (Idhaar, Idghaam, Iqlaab, Ikhfaa)
@@ -155,7 +158,17 @@ A comprehensive Quran reading application with audio recitation, Urdu and Englis
 - Consistent gap between elements (gap-3, gap-4)
 
 ## Recent Changes (November 2025)
-- ✅ **Qaidah & Arabic Learning Section Added** (Latest)
+- ✅ **Authentic Arabic Letter Pronunciation Added** (Latest - Nov 2, 2025)
+  - Extracted audio from user-provided MP4 video (Lesson 1)
+  - Split 90-second audio into 28 individual letter files (3.2s each)
+  - Moved all audio files to client/public/audio/letters/
+  - Replaced Web Speech API with HTML5 Audio API
+  - Implemented ref-based audio management to prevent overlapping playback
+  - Added current-check guards to ensure only latest letter plays
+  - Fixed layout: min-h-[180px], gap-4, text-5xl for better spacing
+  - No MEDIA_ELEMENT_ERROR or audio cleanup issues
+  - Professional male voice pronunciation for all 28 Arabic letters
+- ✅ **Qaidah & Arabic Learning Section Added**
   - Comprehensive Arabic alphabet learning (Alif Baa)
     - 28 letters with detailed information
     - Four position forms for each letter
