@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import { BookmarkIcon } from "lucide-react";
+import { BookmarkIcon, Play } from "lucide-react";
 import { VerseWithTranslations } from "@shared/schema";
 import { cn } from "@/lib/utils";
 
@@ -7,10 +7,16 @@ interface VerseDisplayProps {
   verse: VerseWithTranslations;
   isHighlighted?: boolean;
   onVerseClick?: (verseNumber: number) => void;
+  onPlayClick?: (verseNumberInSurah: number) => void;
 }
 
-export function VerseDisplay({ verse, isHighlighted, onVerseClick }: VerseDisplayProps) {
+export function VerseDisplay({ verse, isHighlighted, onVerseClick, onPlayClick }: VerseDisplayProps) {
   const { ayah, urduTranslation, englishTranslation } = verse;
+
+  const handlePlayClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onPlayClick?.(ayah.numberInSurah);
+  };
 
   return (
     <div
@@ -31,13 +37,23 @@ export function VerseDisplay({ verse, isHighlighted, onVerseClick }: VerseDispla
         >
           {ayah.numberInSurah}
         </Badge>
-        <button
-          className="opacity-0 group-hover:opacity-100 transition-opacity p-2 rounded-full hover-elevate"
-          data-testid={`button-bookmark-${ayah.numberInSurah}`}
-          aria-label="Bookmark verse"
-        >
-          <BookmarkIcon className="w-4 h-4 text-muted-foreground" />
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            className="opacity-0 group-hover:opacity-100 transition-opacity p-2 rounded-full hover-elevate"
+            onClick={handlePlayClick}
+            data-testid={`button-play-verse-${ayah.numberInSurah}`}
+            aria-label="Play verse"
+          >
+            <Play className="w-4 h-4 text-primary fill-primary" />
+          </button>
+          <button
+            className="opacity-0 group-hover:opacity-100 transition-opacity p-2 rounded-full hover-elevate"
+            data-testid={`button-bookmark-${ayah.numberInSurah}`}
+            aria-label="Bookmark verse"
+          >
+            <BookmarkIcon className="w-4 h-4 text-muted-foreground" />
+          </button>
+        </div>
       </div>
 
       <div className="space-y-3">

@@ -18,6 +18,7 @@ export default function QuranReader() {
   const [selectedVerseForTafseer, setSelectedVerseForTafseer] = useState<number | null>(null);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+  const [shouldAutoPlay, setShouldAutoPlay] = useState(false);
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
@@ -82,6 +83,19 @@ export default function QuranReader() {
       setIsTafseerOpen(true);
     }
   };
+
+  const handlePlayVerseClick = (verseNumberInSurah: number) => {
+    setCurrentVerse(verseNumberInSurah);
+    setShouldAutoPlay(true);
+  };
+
+  // Reset shouldAutoPlay after it's been used
+  useEffect(() => {
+    if (shouldAutoPlay) {
+      const timer = setTimeout(() => setShouldAutoPlay(false), 100);
+      return () => clearTimeout(timer);
+    }
+  }, [shouldAutoPlay]);
 
   if (isSurahsLoading) {
     return (
@@ -194,6 +208,7 @@ export default function QuranReader() {
                 verse={verse}
                 isHighlighted={verse.ayah.numberInSurah === currentVerse}
                 onVerseClick={handleVerseClick}
+                onPlayClick={handlePlayVerseClick}
               />
             ))}
           </div>
@@ -220,6 +235,7 @@ export default function QuranReader() {
           onReciterChange={setSelectedReciter}
           isLoading={isVersesLoading}
           onPlayingChange={setIsAudioPlaying}
+          shouldAutoPlay={shouldAutoPlay}
         />
       )}
 

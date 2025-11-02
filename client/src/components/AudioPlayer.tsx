@@ -16,6 +16,7 @@ interface AudioPlayerProps {
   onReciterChange: (reciter: string) => void;
   isLoading?: boolean;
   onPlayingChange?: (isPlaying: boolean) => void;
+  shouldAutoPlay?: boolean;
 }
 
 export function AudioPlayer({
@@ -28,7 +29,8 @@ export function AudioPlayer({
   selectedReciter,
   onReciterChange,
   isLoading,
-  onPlayingChange
+  onPlayingChange,
+  shouldAutoPlay
 }: AudioPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -95,6 +97,18 @@ export function AudioPlayer({
       audioRef.current.volume = volume;
     }
   }, [volume]);
+
+  // Handle auto-play trigger from parent (e.g., when clicking play on a verse)
+  useEffect(() => {
+    if (shouldAutoPlay && audioRef.current && audioUrl) {
+      audioRef.current.play().then(() => {
+        setIsPlaying(true);
+        onPlayingChange?.(true);
+      }).catch(error => {
+        console.log("Auto-play prevented:", error);
+      });
+    }
+  }, [shouldAutoPlay, audioUrl]);
 
   const togglePlayPause = () => {
     if (!audioRef.current || !audioUrl) return;
