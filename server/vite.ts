@@ -86,7 +86,9 @@ export async function setupVite(app: Express, server: Server) {
 }
 
 export function serveStatic(app: Express) {
-  const distPath = path.resolve(import.meta.dirname, "public");
+  // Serve built client from project-root dist/public
+  const distPath = path.resolve(import.meta.dirname, "..", "dist", "public");
+  const publicAudioPath = path.resolve(import.meta.dirname, "..", "public", "audio");
 
   if (!fs.existsSync(distPath)) {
     throw new Error(
@@ -94,10 +96,30 @@ export function serveStatic(app: Express) {
     );
   }
 
+  // Support GitHub Pages base prefix locally if VITE_BASE is set (e.g., /quranpro)
+  const basePrefix = process.env.VITE_BASE ?? "/";
+
+  // Serve audio assets placed in project-root public/audio (used by KidsLearning etc.)
+  if (fs.existsSync(publicAudioPath)) {
+    app.use("/audio", express.static(publicAudioPath));
+  }
+
+  // Default static at root
   app.use(express.static(distPath));
 
-  // fall through to index.html if the file doesn't exist
+  // If a non-root base is configured, also serve static under that prefix
+  if (basePrefix !== "/") {
+    app.use(basePrefix, express.static(distPath));
+  }
+
+  // SPA fallbacks: serve index.html
   app.use("*", (_req, res) => {
     res.sendFile(path.resolve(distPath, "index.html"));
   });
+
+  if (basePrefix !== "/") {
+    app.use(`${basePrefix}*`, (_req, res) => {
+      res.sendFile(path.resolve(distPath, "index.html"));
+    });
+  }
 }
