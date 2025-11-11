@@ -4,6 +4,9 @@ import path from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 
 export default defineConfig({
+  // Set base via env to support GitHub Pages project path (e.g., /quranpro/)
+  // Defaults to '/' for local dev.
+  base: process.env.VITE_BASE ?? '/',
   plugins: [
     react(),
     runtimeErrorOverlay(),
