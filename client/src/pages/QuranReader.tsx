@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2, BookOpen, Moon, Sun, Book, GraduationCap } from "lucide-react";
+import { Loader2, BookOpen, Book, GraduationCap } from "lucide-react";
 import { Link } from "wouter";
 import { SurahSelector } from "@/components/SurahSelector";
+import { AyahSelector } from "@/components/AyahSelector";
+import { JuzSelector } from "@/components/JuzSelector";
 import { VerseDisplay } from "@/components/VerseDisplay";
 import { AudioPlayer } from "@/components/AudioPlayer";
 import { TafseerPanel } from "@/components/TafseerPanel";
@@ -12,81 +14,102 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function QuranReader() {
   const [selectedSurah, setSelectedSurah] = useState(1);
-  const [currentVerse, setCurrentVerse] = useState(1);
+  const [selectedJuz, setSelectedJuz] = useState<number | null>(null);
+  const [viewMode, setViewMode] = useState<'surah' | 'juz'>('surah');
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedReciter, setSelectedReciter] = useState(availableReciters[0].identifier);
   const [isTafseerOpen, setIsTafseerOpen] = useState(false);
   const [selectedVerseForTafseer, setSelectedVerseForTafseer] = useState<number | null>(null);
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
   const [shouldAutoPlay, setShouldAutoPlay] = useState(false);
+  const [tafseerEdition, setTafseerEdition] = useState<"arabic" | "english_maarif">(() => {
+    const saved = localStorage.getItem("tafseerEdition");
+    return (saved === "english_maarif" || saved === "arabic") ? (saved as any) : "arabic";
+  });
 
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
-    if (savedTheme) {
-      setTheme(savedTheme);
-      document.documentElement.classList.toggle('dark', savedTheme === 'dark');
-    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      setTheme('dark');
-      document.documentElement.classList.add('dark');
-    }
-  }, []);
-
-  const toggleTheme = () => {
-    const newTheme = theme === 'light' ? 'dark' : 'light';
-    setTheme(newTheme);
-    localStorage.setItem('theme', newTheme);
-    document.documentElement.classList.toggle('dark', newTheme === 'dark');
-  };
+  // Light-only mode: remove dark theme handling
 
   const { data: surahs, isLoading: isSurahsLoading } = useQuery<Surah[]>({
     queryKey: ['/api/surahs'],
   });
 
-  const { data: verses, isLoading: isVersesLoading, error: versesError } = useQuery<VerseWithTranslations[]>({
-    queryKey: ['/api/surah', selectedSurah, selectedReciter],
-    enabled: selectedSurah > 0,
+  const { data: juzIndex } = useQuery<{ number: number; startSurah: number; startAyah: number; endSurah: number; endAyah: number }[]>({
+    queryKey: ['/api/juz-index'],
   });
 
+  const { data: verses, isLoading: isVersesLoading, error: versesError } = useQuery<VerseWithTranslations[]>({
+    queryKey: viewMode === 'surah'
+      ? ['/api/surah', selectedSurah, selectedReciter]
+      : ['/api/juz', selectedJuz ?? 0, selectedReciter],
+    enabled: viewMode === 'surah' ? selectedSurah > 0 : (selectedJuz !== null),
+  });
+
+  const [tafseerSurahNumber, setTafseerSurahNumber] = useState<number | null>(null);
   const { data: tafseer, isLoading: isTafseerLoading } = useQuery<Tafseer>({
-    queryKey: ['/api/tafseer', selectedSurah, selectedVerseForTafseer],
-    enabled: selectedVerseForTafseer !== null && isTafseerOpen,
+    queryKey: [tafseerEdition === 'arabic' ? '/api/tafseer' : '/api/tafseer/maarif', tafseerSurahNumber, selectedVerseForTafseer],
+    enabled: selectedVerseForTafseer !== null && tafseerSurahNumber !== null && isTafseerOpen,
   });
 
   const currentSurah = surahs?.find(s => s.number === selectedSurah);
-  const currentVerseData = verses?.[currentVerse - 1];
+  const currentVerseData = verses?.[currentIndex];
   const audioUrl = currentVerseData?.ayah?.audio || null;
 
   const handleSurahChange = (surahNumber: number) => {
+    setViewMode('surah');
+    setSelectedJuz(null);
     setSelectedSurah(surahNumber);
-    setCurrentVerse(1);
+    setCurrentIndex(0);
     setSelectedVerseForTafseer(null);
   };
 
+  const handleAyahSelect = (surahNumber: number, ayahNumber: number) => {
+    setViewMode('surah');
+    setSelectedJuz(null);
+    setSelectedSurah(surahNumber);
+    setCurrentIndex(Math.max(0, ayahNumber - 1));
+    setSelectedVerseForTafseer(null);
+    setShouldAutoPlay(true);
+  };
+
+  const handleJuzSelect = (surahNumber: number, ayahNumber: number, juzNumber: number) => {
+    // Use the explicit Juz number from selector to avoid race/mismatch with juzIndex
+    setViewMode('juz');
+    setSelectedJuz(juzNumber);
+    setSelectedSurah(surahNumber); // keep header context to first surah of Juz
+    setCurrentIndex(0);
+    setSelectedVerseForTafseer(null);
+    setShouldAutoPlay(true);
+  };
+
   const handlePreviousVerse = () => {
-    if (currentVerse > 1) {
-      setCurrentVerse(currentVerse - 1);
+    if (verses && currentIndex > 0) {
+      setCurrentIndex(currentIndex - 1);
     }
   };
 
   const handleNextVerse = () => {
-    if (verses && currentVerse < verses.length) {
-      const nextVerse = currentVerse + 1;
-      setCurrentVerse(nextVerse);
+    if (verses && currentIndex < verses.length - 1) {
+      const nextIndex = currentIndex + 1;
+      setCurrentIndex(nextIndex);
       // Auto-play will be handled by AudioPlayer useEffect when audioUrl changes
     }
   };
 
-  const handleVerseClick = (verseNumber: number) => {
-    const verseIndex = verses?.findIndex(v => v.ayah.number === verseNumber);
+  const handleVerseClick = (globalAyahNumber: number) => {
+    const verseIndex = verses?.findIndex(v => v.ayah.number === globalAyahNumber);
     if (verses && verseIndex !== undefined && verseIndex >= 0) {
       setSelectedVerseForTafseer(verses[verseIndex].ayah.numberInSurah);
+      setTafseerSurahNumber(verses[verseIndex].ayah.surah?.number ?? selectedSurah);
       setIsTafseerOpen(true);
     }
   };
 
-  const handlePlayVerseClick = (verseNumberInSurah: number) => {
-    setCurrentVerse(verseNumberInSurah);
-    setShouldAutoPlay(true);
+  const handlePlayVerseClick = (globalAyahNumber: number) => {
+    const verseIndex = verses?.findIndex(v => v.ayah.number === globalAyahNumber) ?? -1;
+    if (verseIndex >= 0) {
+      setCurrentIndex(verseIndex);
+      setShouldAutoPlay(true);
+    }
   };
 
   // Reset shouldAutoPlay after it's been used
@@ -96,6 +119,11 @@ export default function QuranReader() {
       return () => clearTimeout(timer);
     }
   }, [shouldAutoPlay]);
+
+  // Persist tafseer edition
+  useEffect(() => {
+    localStorage.setItem("tafseerEdition", tafseerEdition);
+  }, [tafseerEdition]);
 
   if (isSurahsLoading) {
     return (
@@ -147,29 +175,33 @@ export default function QuranReader() {
                   <span className="md:hidden">Hadith</span>
                 </Button>
               </Link>
-              <Button
-                size="icon"
-                variant="ghost"
-                onClick={toggleTheme}
-                data-testid="button-theme-toggle"
-                aria-label="Toggle theme"
-              >
-                {theme === 'dark' ? (
-                  <Sun className="w-5 h-5" />
-                ) : (
-                  <Moon className="w-5 h-5" />
-                )}
-              </Button>
+              {/* Theme toggle removed: light-only mode */}
             </div>
           </div>
           
           {surahs && (
-            <SurahSelector
-              surahs={surahs}
-              selectedSurah={selectedSurah}
-              onSurahChange={handleSurahChange}
-              isLoading={isVersesLoading}
-            />
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="flex-1">
+                <SurahSelector
+                  surahs={surahs}
+                  selectedSurah={selectedSurah}
+                  onSurahChange={handleSurahChange}
+                  isLoading={isVersesLoading}
+                />
+              </div>
+              <AyahSelector
+                surahs={surahs}
+                onAyahSelect={handleAyahSelect}
+                currentSurah={currentVerseData?.ayah.surah?.number ?? selectedSurah}
+                currentAyah={currentVerseData?.ayah.numberInSurah ?? (currentIndex + 1)}
+              />
+              <JuzSelector
+                surahs={surahs}
+                onJuzSelect={handleJuzSelect}
+                currentSurah={currentVerseData?.ayah.surah?.number ?? selectedSurah}
+                currentAyah={currentVerseData?.ayah.numberInSurah ?? (currentIndex + 1)}
+              />
+            </div>
           )}
         </div>
       </header>
@@ -202,11 +234,11 @@ export default function QuranReader() {
           </div>
         ) : verses && verses.length > 0 ? (
           <div data-testid="container-verses">
-            {verses.map((verse) => (
+            {verses.map((verse, idx) => (
               <VerseDisplay
                 key={verse.ayah.number}
                 verse={verse}
-                isHighlighted={verse.ayah.numberInSurah === currentVerse}
+                isHighlighted={idx === currentIndex}
                 onVerseClick={handleVerseClick}
                 onPlayClick={handlePlayVerseClick}
               />
@@ -245,11 +277,11 @@ export default function QuranReader() {
       {verses && verses.length > 0 && (
         <AudioPlayer
           audioUrl={audioUrl}
-          currentVerse={currentVerse}
+          currentVerse={currentIndex + 1}
           totalVerses={verses.length}
           onPrevious={handlePreviousVerse}
           onNext={handleNextVerse}
-          onVerseChange={setCurrentVerse}
+          onVerseChange={(v) => setCurrentIndex(Math.max(0, Math.min(v - 1, (verses?.length ?? 1) - 1)))}
           selectedReciter={selectedReciter}
           onReciterChange={setSelectedReciter}
           isLoading={isVersesLoading}
@@ -264,6 +296,8 @@ export default function QuranReader() {
         onToggle={() => setIsTafseerOpen(!isTafseerOpen)}
         isLoading={isTafseerLoading}
         verseNumber={selectedVerseForTafseer || undefined}
+        edition={tafseerEdition}
+        onEditionChange={setTafseerEdition}
       />
     </div>
   );

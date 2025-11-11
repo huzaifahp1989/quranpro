@@ -38,25 +38,43 @@ export function AudioPlayer({
   const [volume, setVolume] = useState(1);
   const [isRepeating, setIsRepeating] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
+  // Fallback quality handling: try 128kbps, then 64, then 32
+  const [qualityOverride, setQualityOverride] = useState<128 | 64 | 32 | null>(null);
+
+  // Build effective URL based on quality override
+  const effectiveAudioUrl = (() => {
+    if (!audioUrl) return null;
+    if (!qualityOverride) return audioUrl;
+    // The CDN structure is: /quran/audio/<bitrate>/<reciter>/<ayah>.mp3
+    // Replace the bitrate segment depending on whether it's proxied or CDN
+    if (audioUrl.includes('/api/audio/')) {
+      return audioUrl.replace(/\/api\/audio\/\d+\//, `/api/audio/${qualityOverride}/`);
+    }
+    // Fallback for direct CDN URLs
+    return audioUrl.replace(/\/audio\/\d+\//, `/audio/${qualityOverride}/`);
+  })();
 
   useEffect(() => {
-    if (audioRef.current && audioUrl) {
-      audioRef.current.src = audioUrl;
-      audioRef.current.load();
-      
-      // Auto-play if we were playing before
-      if (isPlaying) {
-        const playPromise = audioRef.current.play();
-        if (playPromise !== undefined) {
-          playPromise.catch(error => {
-            console.log("Auto-play prevented:", error);
-            setIsPlaying(false);
-            onPlayingChange?.(false);
-          });
-        }
+    const audio = audioRef.current;
+    if (!audio || !effectiveAudioUrl) return;
+
+    // Pause any current playback before switching source to avoid aborted requests noise
+    try { audio.pause(); } catch {}
+    audio.src = effectiveAudioUrl;
+    audio.load();
+    
+    // Auto-play if we were playing before
+    if (isPlaying) {
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(error => {
+          console.log("Auto-play prevented:", error);
+          setIsPlaying(false);
+          onPlayingChange?.(false);
+        });
       }
     }
-  }, [audioUrl]);
+  }, [effectiveAudioUrl]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -80,17 +98,33 @@ export function AudioPlayer({
         onPlayingChange?.(false);
       }
     };
+    const handleError = () => {
+      // On error, try lower bitrate fallbacks
+      if (audioUrl) {
+        if (qualityOverride === null) {
+          setQualityOverride(64);
+        } else if (qualityOverride === 64) {
+          setQualityOverride(32);
+        } else {
+          console.error("Audio failed to load for URL:", audioUrl);
+          setIsPlaying(false);
+          onPlayingChange?.(false);
+        }
+      }
+    };
 
     audio.addEventListener('timeupdate', handleTimeUpdate);
     audio.addEventListener('durationchange', handleDurationChange);
     audio.addEventListener('ended', handleEnded);
+    audio.addEventListener('error', handleError);
 
     return () => {
       audio.removeEventListener('timeupdate', handleTimeUpdate);
       audio.removeEventListener('durationchange', handleDurationChange);
       audio.removeEventListener('ended', handleEnded);
+      audio.removeEventListener('error', handleError);
     };
-  }, [currentVerse, totalVerses, onNext, isRepeating]);
+  }, [currentVerse, totalVerses, onNext, isRepeating, qualityOverride, audioUrl]);
 
   useEffect(() => {
     if (audioRef.current) {
@@ -156,7 +190,7 @@ export function AudioPlayer({
 
   return (
     <div className="sticky bottom-0 left-0 right-0 bg-card border-t border-card-border z-40">
-      <audio ref={audioRef} />
+      <audio ref={audioRef} preload="auto" crossOrigin="anonymous" />
       
       <div className="max-w-4xl mx-auto px-3 sm:px-6 py-3 sm:py-4">
         <div className="flex flex-col gap-2 sm:gap-3">

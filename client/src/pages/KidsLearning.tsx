@@ -53,6 +53,7 @@ const learningSections: LearningSection[] = [
 const reciters = [
   { id: "ar.minshawi", name: "Mohamed Siddiq al-Minshawi (Murattal)", shortName: "Minshawi" },
   { id: "ar.hudhaify", name: "Ali Bin Abdur-Rahman Al-Hudhaify", shortName: "Hudhaify" },
+  // Removed Sudais and Ghamdi per request
 ];
 
 export default function KidsLearning() {

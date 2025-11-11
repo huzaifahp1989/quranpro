@@ -12,9 +12,11 @@ interface TafseerPanelProps {
   onToggle: () => void;
   isLoading?: boolean;
   verseNumber?: number;
+  edition?: "arabic" | "english_maarif";
+  onEditionChange?: (edition: "arabic" | "english_maarif") => void;
 }
 
-export function TafseerPanel({ tafseer, isOpen, onToggle, isLoading, verseNumber }: TafseerPanelProps) {
+export function TafseerPanel({ tafseer, isOpen, onToggle, isLoading, verseNumber, edition, onEditionChange }: TafseerPanelProps) {
   return (
     <>
       {!isOpen && (
@@ -45,6 +47,30 @@ export function TafseerPanel({ tafseer, isOpen, onToggle, isLoading, verseNumber
                 Tafseer {verseNumber && `- Verse ${verseNumber}`}
               </h3>
             </div>
+            {/* Edition selector (optional) */}
+            {onEditionChange && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Edition:</span>
+                <select
+                  className="px-2 py-1 border rounded-md bg-background text-sm"
+                  value={edition ?? "arabic"}
+                  onChange={(e) => onEditionChange(e.target.value as "arabic" | "english_maarif")}
+                >
+                  <option value="arabic">Arabic — Al-Muyassar</option>
+                  <option value="english_maarif">English — Maarif-ul-Quran</option>
+                </select>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={onToggle}
+                  data-testid="button-close-tafseer"
+                  aria-label="Close Tafseer"
+                >
+                  <X className="w-5 h-5" />
+                </Button>
+              </div>
+            )}
+            {!onEditionChange && (
             <Button
               size="icon"
               variant="ghost"
@@ -54,6 +80,7 @@ export function TafseerPanel({ tafseer, isOpen, onToggle, isLoading, verseNumber
             >
               <X className="w-5 h-5" />
             </Button>
+            )}
           </div>
 
           <ScrollArea className="flex-1 p-6">

@@ -1,12 +1,18 @@
 import type { Express } from "express";
+import express from "express";
 import { createServer, type Server } from "http";
 import axios from "axios";
 import { storage } from "./storage";
 import { insertBookmarkSchema } from "@shared/schema";
 import { randomUUID } from "crypto";
+import { promises as fs } from "fs";
+import path from "path";
 
-const ALQURAN_CLOUD_API = "http://api.alquran.cloud/v1";
+// Use HTTPS to avoid network/mixed-content issues
+const ALQURAN_CLOUD_API = "https://api.alquran.cloud/v1";
 const QURAN_TAFSEER_API = "http://api.quran-tafseer.com";
+// External CDN for English Tafsir (Maarif-ul-Quran)
+const TAFSIR_CDN_BASE = "https://cdn.jsdelivr.net/gh/spa5k/tafsir_api@master/tafseer";
 
 // Simple in-memory cache
 const cache = new Map<string, { data: any; timestamp: number }>();
@@ -90,7 +96,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             number: ayah.number,
             numberInSurah: ayah.numberInSurah,
             text: ayah.text,
-            audio: audioData.ayahs[index]?.audio || "",
+            // Serve audio via local proxy to avoid CORS/adblock issues
+            // IMPORTANT: Use the GLOBAL ayah number for audio, not numberInSurah
+            audio: `/api/audio/128/${reciterEdition}/${ayah.number}.mp3`,
             surah: {
               number: arabicData.number,
               name: arabicData.name,
@@ -123,6 +131,238 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         res.status(500).json({ error: "Failed to load surah. Please try again." });
       }
+    }
+  });
+
+  // Get Juz (Para) verses aggregated across surah boundaries with translations and audio
+  app.get('/api/juz/:juzNumber/:reciterEdition', async (req, res) => {
+    try {
+      const { juzNumber, reciterEdition } = req.params as { juzNumber: string; reciterEdition: string };
+      const juzNum = parseInt(juzNumber, 10);
+      if (Number.isNaN(juzNum) || juzNum < 1 || juzNum > 30) {
+        return res.status(400).json({ error: 'Invalid Juz number. Must be between 1 and 30' });
+      }
+
+      const boundaries = {
+        1: { startSurah: 1, startAyah: 1, endSurah: 2, endAyah: 141 },
+        2: { startSurah: 2, startAyah: 142, endSurah: 2, endAyah: 252 },
+        3: { startSurah: 2, startAyah: 253, endSurah: 3, endAyah: 92 },
+        4: { startSurah: 3, startAyah: 92, endSurah: 4, endAyah: 23 },
+        5: { startSurah: 4, startAyah: 24, endSurah: 4, endAyah: 147 },
+        6: { startSurah: 4, startAyah: 148, endSurah: 5, endAyah: 82 },
+        7: { startSurah: 5, startAyah: 83, endSurah: 6, endAyah: 110 },
+        8: { startSurah: 6, startAyah: 111, endSurah: 7, endAyah: 87 },
+        9: { startSurah: 7, startAyah: 88, endSurah: 8, endAyah: 40 },
+        10: { startSurah: 8, startAyah: 41, endSurah: 9, endAyah: 92 },
+        11: { startSurah: 9, startAyah: 93, endSurah: 11, endAyah: 5 },
+        12: { startSurah: 11, startAyah: 6, endSurah: 12, endAyah: 52 },
+        13: { startSurah: 12, startAyah: 53, endSurah: 14, endAyah: 52 },
+        14: { startSurah: 15, startAyah: 1, endSurah: 16, endAyah: 128 },
+        15: { startSurah: 17, startAyah: 1, endSurah: 18, endAyah: 74 },
+        16: { startSurah: 18, startAyah: 75, endSurah: 20, endAyah: 135 },
+        17: { startSurah: 21, startAyah: 1, endSurah: 22, endAyah: 78 },
+        18: { startSurah: 23, startAyah: 1, endSurah: 25, endAyah: 20 },
+        19: { startSurah: 25, startAyah: 21, endSurah: 27, endAyah: 55 },
+        20: { startSurah: 27, startAyah: 56, endSurah: 29, endAyah: 45 },
+        21: { startSurah: 29, startAyah: 46, endSurah: 33, endAyah: 30 },
+        22: { startSurah: 33, startAyah: 31, endSurah: 36, endAyah: 27 },
+        23: { startSurah: 36, startAyah: 28, endSurah: 39, endAyah: 31 },
+        24: { startSurah: 39, startAyah: 32, endSurah: 41, endAyah: 46 },
+        25: { startSurah: 41, startAyah: 47, endSurah: 45, endAyah: 37 },
+        26: { startSurah: 46, startAyah: 1, endSurah: 51, endAyah: 30 },
+        27: { startSurah: 51, startAyah: 31, endSurah: 57, endAyah: 29 },
+        28: { startSurah: 58, startAyah: 1, endSurah: 66, endAyah: 12 },
+        29: { startSurah: 67, startAyah: 1, endSurah: 77, endAyah: 50 },
+        30: { startSurah: 78, startAyah: 1, endSurah: 114, endAyah: 6 },
+      } as Record<number, { startSurah: number; startAyah: number; endSurah: number; endAyah: number }>;
+
+      const b = boundaries[juzNum];
+      if (!b) return res.status(404).json({ error: 'Juz boundaries not found' });
+
+      const versesAgg: any[] = [];
+      const editions = `quran-uthmani,${reciterEdition},ur.jalandhry,en.sahih`;
+      for (let s = b.startSurah; s <= b.endSurah; s++) {
+        const response = await axios.get(
+          `${ALQURAN_CLOUD_API}/surah/${s}/editions/${editions}`,
+          { timeout: 20000 }
+        );
+        if (response.data.code !== 200 || !response.data.data) {
+          return res.status(500).json({ error: `Failed to fetch surah ${s} data` });
+        }
+        const [arabicData, audioData, urduData, englishData] = response.data.data;
+
+        const startAyah = (s === b.startSurah) ? b.startAyah : 1;
+        const endAyah = (s === b.endSurah) ? b.endAyah : arabicData.numberOfAyahs;
+        for (let idx = startAyah - 1; idx < endAyah; idx++) {
+          const ayah = arabicData.ayahs[idx];
+          versesAgg.push({
+            ayah: {
+              number: ayah.number, // global ayah number
+              numberInSurah: ayah.numberInSurah,
+              text: ayah.text,
+              audio: `/api/audio/128/${reciterEdition}/${ayah.number}.mp3`,
+              surah: {
+                number: arabicData.number,
+                name: arabicData.name,
+                englishName: arabicData.englishName,
+              },
+            },
+            urduTranslation: {
+              text: urduData.ayahs[idx]?.text || "",
+              language: "Urdu",
+              translator: "Fateh Muhammad Jalandhry",
+            },
+            englishTranslation: {
+              text: englishData.ayahs[idx]?.text || "",
+              language: "English",
+              translator: "Sahih International",
+            },
+          });
+        }
+      }
+
+      return res.json(versesAgg);
+    } catch (error: any) {
+      console.error('Error fetching juz:', error?.message || error);
+      if (error.response?.status === 404) {
+        return res.status(404).json({ error: 'Juz not found' });
+      } else if (error.code === 'ECONNABORTED') {
+        return res.status(504).json({ error: 'Request timeout - please try again' });
+      }
+      return res.status(500).json({ error: 'Failed to load Juz. Please try again.' });
+    }
+  });
+
+  // Proxy Quran audio to avoid CORS/mixed-content/adblock issues
+  const handleAudioProxy = async (req: any, res: any) => {
+    try {
+      const { bitrate, reciter, ayah } = req.params as { bitrate: string; reciter: string; ayah: string };
+      // Validate basic params
+      if (!/^(128|64|32)$/.test(bitrate)) {
+        return res.status(400).json({ error: 'Invalid bitrate. Allowed: 128, 64, 32' });
+      }
+      if (!/^[a-z]{2}\.[a-z0-9.]+$/i.test(reciter)) {
+        return res.status(400).json({ error: 'Invalid reciter identifier' });
+      }
+      const ayahNum = parseInt(ayah, 10);
+      if (Number.isNaN(ayahNum) || ayahNum < 1) {
+        return res.status(400).json({ error: 'Invalid ayah number' });
+      }
+
+      // Some reciters do not have ayah-by-ayah audio on the islamic.network CDN.
+      // Gracefully fall back to a supported ayah-reciter to avoid playback errors.
+      const SUPPORTED_AYAH_RECITERS = new Set(['ar.alafasy', 'ar.husary', 'ar.minshawi', 'ar.shaatree', 'ar.abdulbasitmurattal']);
+      const fallbackMap: Record<string, string> = {
+        'ar.sudais': 'ar.alafasy',
+        'ar.ghamdi': 'ar.alafasy',
+      };
+      const effectiveReciter = SUPPORTED_AYAH_RECITERS.has(reciter) ? reciter : (fallbackMap[reciter] || 'ar.alafasy');
+
+      const remoteUrl = `https://cdn.islamic.network/quran/audio/${bitrate}/${effectiveReciter}/${ayah}.mp3`;
+      const cacheKey = `audio-${bitrate}-${effectiveReciter}-${ayah}`;
+      const cached = getFromCache(cacheKey);
+      if (cached) {
+        // If we cached a Buffer previously, stream it
+        res.setHeader('Content-Type', 'audio/mpeg');
+        if (effectiveReciter !== reciter) {
+          res.setHeader('X-Reciter-Fallback', effectiveReciter);
+        }
+        return res.end(cached);
+      }
+
+      const response = await axios.get(remoteUrl, { responseType: 'arraybuffer', timeout: 20000 });
+      if (response.status >= 200 && response.status < 300 && response.data) {
+        const buffer: Buffer = Buffer.from(response.data);
+        // Cache small audio files briefly to reduce repeated fetches
+        setCache(cacheKey, buffer);
+        res.setHeader('Content-Type', 'audio/mpeg');
+        res.setHeader('Cache-Control', 'public, max-age=300');
+        if (effectiveReciter !== reciter) {
+          res.setHeader('X-Reciter-Fallback', effectiveReciter);
+        }
+        return res.end(buffer);
+      }
+      return res.status(502).json({ error: 'Failed to fetch audio from CDN' });
+    } catch (error: any) {
+      console.error('Audio proxy error:', error?.message || error);
+      if (error.code === 'ECONNABORTED') {
+        return res.status(504).json({ error: 'Audio request timeout' });
+      }
+      return res.status(500).json({ error: 'Audio proxy failed' });
+    }
+  };
+
+  // Broad match to ensure Windows path/Express parsing quirks don't miss this route
+  app.get('/api/audio/*', (req, res) => {
+    try {
+      const parts = req.path.split('/').filter(Boolean);
+      // parts: ['api','audio', '<bitrate>', '<reciter>', '<ayah(.mp3)?>']
+      const bitrate = parts[2];
+      const reciter = parts[3];
+      let ayah = parts[4] || '';
+      ayah = ayah.replace(/\.mp3$/i, '');
+
+      req.params = { bitrate, reciter, ayah } as any;
+      return handleAudioProxy(req, res);
+    } catch (e) {
+      console.error('Audio wildcard route parse error:', e);
+      return res.status(400).json({ error: 'Invalid audio URL' });
+    }
+  });
+
+  // Proxy full-surah audio by reciter and 3-digit surah number
+  app.get('/api/surah-audio/:reciter/:surah3', async (req, res) => {
+    try {
+      const { reciter, surah3 } = req.params as { reciter: string; surah3: string };
+      if (!/^[0-9]{3}$/.test(surah3)) {
+        return res.status(400).json({ error: 'Invalid surah number (expected 3 digits)' });
+      }
+      if (!/^[a-z0-9_\-.]+$/i.test(reciter)) {
+        return res.status(400).json({ error: 'Invalid reciter identifier' });
+      }
+      const remoteUrl = `https://download.quranicaudio.com/quran/${reciter}/${surah3}.mp3`;
+      const cacheKey = `surah-audio-${reciter}-${surah3}`;
+      const cached = getFromCache(cacheKey);
+      if (cached) {
+        res.setHeader('Content-Type', 'audio/mpeg');
+        return res.end(cached);
+      }
+      const response = await axios.get(remoteUrl, { responseType: 'arraybuffer', timeout: 20000 });
+      if (response.status >= 200 && response.status < 300 && response.data) {
+        const buffer: Buffer = Buffer.from(response.data);
+        setCache(cacheKey, buffer);
+        res.setHeader('Content-Type', 'audio/mpeg');
+        res.setHeader('Cache-Control', 'public, max-age=300');
+        return res.end(buffer);
+      }
+      return res.status(502).json({ error: 'Failed to fetch surah audio from source' });
+    } catch (error: any) {
+      console.error('Surah audio proxy error:', error?.message || error);
+      if (error.code === 'ECONNABORTED') {
+        return res.status(504).json({ error: 'Audio request timeout' });
+      }
+      return res.status(500).json({ error: 'Surah audio proxy failed' });
+    }
+  });
+
+  // Upload user recording (audio/webm) and save under public/recordings
+  app.post('/api/upload-recording', express.raw({ type: '*/*', limit: '50mb' }), async (req, res) => {
+    try {
+      const buf = req.body as Buffer;
+      if (!buf || !(buf instanceof Buffer) || buf.length === 0) {
+        return res.status(400).json({ error: 'No audio body provided' });
+      }
+      const id = randomUUID();
+      const dir = path.join(process.cwd(), 'public', 'recordings');
+      await fs.mkdir(dir, { recursive: true });
+      const filename = `${id}.webm`;
+      const filePath = path.join(dir, filename);
+      await fs.writeFile(filePath, buf);
+      const url = `/recordings/${filename}`;
+      return res.json({ url, filename });
+    } catch (e: any) {
+      console.error('Upload recording error:', e?.message || e);
+      return res.status(500).json({ error: 'Failed to save recording' });
     }
   });
 
@@ -173,6 +413,159 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         res.status(500).json({ error: "Failed to fetch tafseer" });
       }
+    }
+  });
+
+  // English Tafsir: Maarif-ul-Quran (proxy/local-first)
+  app.get("/api/tafseer/maarif/:surahNumber/:ayahNumber", async (req, res) => {
+    try {
+      const { surahNumber, ayahNumber } = req.params;
+      const surahNum = parseInt(surahNumber);
+      const ayahNum = parseInt(ayahNumber);
+
+      if (isNaN(surahNum) || isNaN(ayahNum) || surahNum < 1 || surahNum > 114 || ayahNum < 1) {
+        return res.status(400).json({ error: "Invalid surah or ayah number" });
+      }
+
+      const cacheKey = `tafseer-maarif-${surahNum}-${ayahNum}`;
+      const cached = getFromCache(cacheKey);
+      if (cached) {
+        return res.json(cached);
+      }
+
+      // Try local dataset first: public/data/tafsir/maarif/en/<surah>/<ayah>.json
+      try {
+        const localPath = path.join(process.cwd(), 'public', 'data', 'tafsir', 'maarif', 'en', String(surahNum), `${ayahNum}.json`);
+        const exists = await fs.stat(localPath).then(() => true).catch(() => false);
+        if (exists) {
+          const raw = await fs.readFile(localPath, 'utf-8');
+          const json = JSON.parse(raw);
+          const tafseer = {
+            ayahNumber: ayahNum,
+            text: json.text || String(json),
+            tafseerName: "Maarif-ul-Quran",
+            language: "English",
+          };
+          setCache(cacheKey, tafseer);
+          return res.json(tafseer);
+        }
+      } catch {}
+
+      // Fallback to CDN: spa5k/tafsir_api
+      // Expected path: /tafseer/en-tafsir-maarif-ul-quran/<surah>/<ayah>.json
+      const edition = 'en-tafsir-maarif-ul-quran';
+      const remoteUrl = `${TAFSIR_CDN_BASE}/${edition}/${surahNum}/${ayahNum}.json`;
+      try {
+        const response = await axios.get(remoteUrl, { timeout: 15000 });
+        if (response.status >= 200 && response.status < 300 && response.data) {
+          const data = response.data;
+          const text = (typeof data === 'string') ? data : (data.text || data.content || JSON.stringify(data));
+          const tafseer = {
+            ayahNumber: ayahNum,
+            text,
+            tafseerName: "Maarif-ul-Quran",
+            language: "English",
+          };
+          setCache(cacheKey, tafseer);
+          return res.json(tafseer);
+        }
+        return res.status(404).json({ error: "Tafseer not found for this verse" });
+      } catch (error: any) {
+        console.error("Maarif Tafseer fetch error:", error?.message || error);
+        if (error?.response?.status === 404) {
+          return res.status(404).json({ error: "Tafseer not available for this verse" });
+        } else if (error?.code === 'ECONNABORTED') {
+          return res.status(504).json({ error: "Request timeout - please try again" });
+        }
+        return res.status(500).json({ error: "Failed to fetch Maarif-ul-Quran tafseer" });
+      }
+    } catch (error: any) {
+      console.error("Error in Maarif Tafseer route:", error?.message || error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Compute Juz (Para) boundaries from local ayah→juz map
+  app.get('/api/juz-index', async (_req, res) => {
+    try {
+      const filePath = path.join(process.cwd(), 'public', 'data', 'juz_map.json');
+      const raw = await fs.readFile(filePath, 'utf-8');
+      const entries: Array<{ surah: number; ayah: number; juz: number }> = JSON.parse(raw);
+
+      const CANONICAL_JUZ_BOUNDARIES: Array<{ number: number; startSurah: number; startAyah: number; endSurah: number; endAyah: number }> = [
+        { number: 1, startSurah: 1, startAyah: 1, endSurah: 2, endAyah: 141 },
+        { number: 2, startSurah: 2, startAyah: 142, endSurah: 2, endAyah: 252 },
+        { number: 3, startSurah: 2, startAyah: 253, endSurah: 3, endAyah: 92 },
+        { number: 4, startSurah: 3, startAyah: 92, endSurah: 4, endAyah: 23 },
+        { number: 5, startSurah: 4, startAyah: 24, endSurah: 4, endAyah: 147 },
+        { number: 6, startSurah: 4, startAyah: 148, endSurah: 5, endAyah: 82 },
+        { number: 7, startSurah: 5, startAyah: 83, endSurah: 6, endAyah: 110 },
+        { number: 8, startSurah: 6, startAyah: 111, endSurah: 7, endAyah: 87 },
+        { number: 9, startSurah: 7, startAyah: 88, endSurah: 8, endAyah: 40 },
+        { number: 10, startSurah: 8, startAyah: 41, endSurah: 9, endAyah: 92 },
+        { number: 11, startSurah: 9, startAyah: 93, endSurah: 11, endAyah: 5 },
+        { number: 12, startSurah: 11, startAyah: 6, endSurah: 12, endAyah: 52 },
+        { number: 13, startSurah: 12, startAyah: 53, endSurah: 14, endAyah: 52 },
+        { number: 14, startSurah: 15, startAyah: 1, endSurah: 16, endAyah: 128 },
+        { number: 15, startSurah: 17, startAyah: 1, endSurah: 18, endAyah: 74 },
+        { number: 16, startSurah: 18, startAyah: 75, endSurah: 20, endAyah: 135 },
+        { number: 17, startSurah: 21, startAyah: 1, endSurah: 22, endAyah: 78 },
+        { number: 18, startSurah: 23, startAyah: 1, endSurah: 25, endAyah: 20 },
+        { number: 19, startSurah: 25, startAyah: 21, endSurah: 27, endAyah: 55 },
+        { number: 20, startSurah: 27, startAyah: 56, endSurah: 29, endAyah: 45 },
+        { number: 21, startSurah: 29, startAyah: 46, endSurah: 33, endAyah: 30 },
+        { number: 22, startSurah: 33, startAyah: 31, endSurah: 36, endAyah: 27 },
+        { number: 23, startSurah: 36, startAyah: 28, endSurah: 39, endAyah: 31 },
+        { number: 24, startSurah: 39, startAyah: 32, endSurah: 41, endAyah: 46 },
+        { number: 25, startSurah: 41, startAyah: 47, endSurah: 45, endAyah: 37 },
+        { number: 26, startSurah: 46, startAyah: 1, endSurah: 51, endAyah: 30 },
+        { number: 27, startSurah: 51, startAyah: 31, endSurah: 57, endAyah: 29 },
+        { number: 28, startSurah: 58, startAyah: 1, endSurah: 66, endAyah: 12 },
+        { number: 29, startSurah: 67, startAyah: 1, endSurah: 77, endAyah: 50 },
+        { number: 30, startSurah: 78, startAyah: 1, endSurah: 114, endAyah: 6 },
+      ];
+
+      // Group entries by juz
+      const groups = new Map<number, Array<{ surah: number; ayah: number }>>();
+      for (const e of entries) {
+        if (!groups.has(e.juz)) groups.set(e.juz, []);
+        groups.get(e.juz)!.push({ surah: e.surah, ayah: e.ayah });
+      }
+
+      // Helper to compare (surah, ayah) by natural Quran order
+      const cmp = (a: { surah: number; ayah: number }, b: { surah: number; ayah: number }) => {
+        if (a.surah !== b.surah) return a.surah - b.surah;
+        return a.ayah - b.ayah;
+      };
+
+      const result = Array.from({ length: 30 }, (_, i) => {
+        const num = i + 1;
+        const list = groups.get(num) ?? [];
+        if (list.length === 0) {
+          // Fallback to canonical boundaries when local map is missing
+          const canon = CANONICAL_JUZ_BOUNDARIES.find(x => x.number === num)!;
+          return canon;
+        }
+        // Compute min and max by (surah, ayah)
+        let start = list[0];
+        let end = list[0];
+        for (const p of list) {
+          if (cmp(p, start) < 0) start = p;
+          if (cmp(p, end) > 0) end = p;
+        }
+        return {
+          number: num,
+          startSurah: start.surah,
+          startAyah: start.ayah,
+          endSurah: end.surah,
+          endAyah: end.ayah,
+        };
+      });
+
+      res.json(result);
+    } catch (e: any) {
+      console.error('Juz index error:', e?.message || e);
+      res.status(500).json({ error: 'Failed to compute Juz boundaries' });
     }
   });
 

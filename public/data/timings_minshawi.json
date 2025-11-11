@@ -1,0 +1,9 @@
+[
+  { "surah": 1, "ayah": 1, "startMs": 0, "endMs": 3000 },
+  { "surah": 1, "ayah": 2, "startMs": 3000, "endMs": 7000 },
+  { "surah": 1, "ayah": 3, "startMs": 7000, "endMs": 10000 },
+  { "surah": 1, "ayah": 4, "startMs": 10000, "endMs": 13000 },
+  { "surah": 1, "ayah": 5, "startMs": 13000, "endMs": 17000 },
+  { "surah": 1, "ayah": 6, "startMs": 17000, "endMs": 20000 },
+  { "surah": 1, "ayah": 7, "startMs": 20000, "endMs": 26000 }
+]

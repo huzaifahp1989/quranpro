@@ -206,25 +206,36 @@ const tajweedRules: TajweedRule[] = [
 ];
 
 // Map Arabic letters to audio filenames (using Arabic character as key to avoid name duplicates)
+// Map to actual filenames present in client/public/audio/letters/
+// If you change filenames in that folder, update these values to match exactly (without .mp3 extension)
+// Map Arabic letters to available audio filenames in /public/audio/letters
+// These filenames were verified in the project root public folder.
 const letterAudioMap: { [key: string]: string } = {
   "ا": "alif",
   "ب": "baa",
   "ت": "taa",
   "ث": "thaa",
   "ج": "jeem",
-  "ح": "haa",
+  // "ح" is the heavy throat 'haa' (ح). Use the heavy clip if available.
+  "ح": "haa_h",
   "خ": "khaa",
   "د": "dal",
+  // "ذ" (Dhaal) corresponds to thal.mp3 in the assets
   "ذ": "thal",
   "ر": "raa",
+  // "ز" is Zay
   "ز": "zay",
   "س": "seen",
   "ش": "sheen",
   "ص": "saad",
   "ض": "daad",
-  "ط": "taa_h",     // Heavy Taa
-  "ظ": "zaa",       // Heavy Dhaa
+  // "ط" is the heavy 'Taa' -> use taa_h.mp3
+  "ط": "taa_h",
+  // "ظ" often pronounced like a heavy 'z' -> zaa.mp3
+  "ظ": "zaa",
+  // "ع" uses ayn.mp3 in assets
   "ع": "ayn",
+  // "غ" uses ghayn.mp3 in assets
   "غ": "ghayn",
   "ف": "faa",
   "ق": "qaaf",
@@ -232,14 +243,19 @@ const letterAudioMap: { [key: string]: string } = {
   "ل": "laam",
   "م": "meem",
   "ن": "noon",
-  "ه": "haa_h",     // Final Haa
+  // "ه" is the light 'haa' (ه) -> use haa.mp3
+  "ه": "haa",
+  // "و" Waaw
   "و": "waaw",
+  // "ي" Yaa
   "ي": "yaa",
 };
 
 export function QaidahSection() {
   const [selectedLetter, setSelectedLetter] = useState<ArabicLetter | null>(null);
   const [selectedRule, setSelectedRule] = useState<TajweedRule | null>(null);
+  const [currentAudioName, setCurrentAudioName] = useState<string | null>(null);
+  const [currentAudioError, setCurrentAudioError] = useState<string | null>(null);
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
 
   // Cleanup audio on unmount
@@ -251,7 +267,7 @@ export function QaidahSection() {
     };
   }, []);
 
-  const playLetterAudio = (arabicLetter: string) => {
+  const playLetterAudio = async (arabicLetter: string) => {
     try {
       // Get the audio filename for this letter
       const audioFilename = letterAudioMap[arabicLetter];
@@ -260,47 +276,51 @@ export function QaidahSection() {
         return;
       }
 
-      // Simply pause any currently playing audio (don't clear src)
-      if (currentAudioRef.current) {
-        currentAudioRef.current.pause();
+      const audioUrl = `/audio/letters/${audioFilename}.mp3`;
+
+      // Reset previous error and set current audio name
+      setCurrentAudioError(null);
+      setCurrentAudioName(`${audioFilename}.mp3`);
+
+      // Get or create a single reusable audio element
+      let audio = currentAudioRef.current;
+      if (!audio) {
+        audio = new Audio();
+        audio.volume = 1.0;
+        audio.preload = 'auto';
+        // Central error handler (shows friendly message; benign aborts can happen when switching quickly)
+        audio.addEventListener('error', () => {
+          if (currentAudioRef.current === audio) {
+            const code = audio!.error?.code ?? 0;
+            setCurrentAudioError(
+              code
+                ? `Audio load/play error (code ${code}). If you switched letters quickly, this can be harmless.`
+                : `Audio error occurred. If you switched letters quickly, this can be harmless.`
+            );
+          }
+        });
+        currentAudioRef.current = audio;
       }
 
-      // Create new audio element
-      const audioUrl = `/audio/letters/${audioFilename}.mp3`;
-      const audio = new Audio(audioUrl);
-      audio.volume = 1.0;
-      
-      // Store reference to current audio
-      currentAudioRef.current = audio;
-      
-      // Wait for audio to be ready before playing
-      audio.addEventListener('canplaythrough', () => {
-        // Only play if this is still the current audio (prevents old audios from playing)
+      // Pause any current playback and update the source
+      audio.pause();
+      audio.oncanplaythrough = null; // clear old handler
+      audio.src = audioUrl;
+      audio.load();
+
+      audio.oncanplaythrough = () => {
         if (currentAudioRef.current === audio) {
           audio.play().catch(error => {
-            console.error('Error playing audio:', audioFilename, error);
+            const name = (error && (error as any).name) ? (error as any).name : '';
+            // Ignore AbortError which is benign when switching sources quickly
+            if (String(name).includes('Abort')) return;
+            setCurrentAudioError(`Playback error: ${String(error)}`);
           });
         }
-      }, { once: true });
-      
-      audio.addEventListener('error', (e) => {
-        const target = e.target as HTMLAudioElement;
-        // Only log errors for the current audio
-        if (currentAudioRef.current === audio) {
-          const errorCode = target.error?.code;
-          const errorMsg = target.error?.message || 'Unknown error';
-          console.error(`Audio load error for ${audioFilename}:`, {
-            code: errorCode,
-            message: errorMsg,
-            url: audioUrl
-          });
-        }
-      });
-      
-      // Start loading the audio
-      audio.load();
+      };
     } catch (error) {
       console.error('Error in audio playback:', error);
+      setCurrentAudioError(`Unexpected error: ${String(error)}`);
     }
   };
 
@@ -350,7 +370,9 @@ export function QaidahSection() {
                 {arabicAlphabet.map((letter, index) => (
                   <Card
                     key={`${letter.arabic}-${index}`}
-                    className="hover-elevate active-elevate-2 cursor-pointer transition-all"
+                    // Simplify hover/active styles to avoid any chance of z-index overlays
+                    // causing visual overlap across grid items
+                    className="cursor-pointer transition-all hover:bg-muted/40 active:bg-muted/60"
                     onClick={() => {
                       setSelectedLetter(letter);
                       playLetterAudio(letter.arabic);
@@ -369,6 +391,8 @@ export function QaidahSection() {
                         className="h-7 w-7 flex-shrink-0"
                         onClick={(e) => {
                           e.stopPropagation();
+                          // Ensure the displayed letter matches the audio being played
+                          setSelectedLetter(letter);
                           playLetterAudio(letter.arabic);
                         }}
                         aria-label={`Hear pronunciation of ${letter.name}`}
@@ -393,10 +417,21 @@ export function QaidahSection() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
+                    {currentAudioName && (
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <span>Playing audio:</span>
+                        <Badge variant="outline">{currentAudioName}</Badge>
+                      </div>
+                    )}
                     <div>
                       <p className="text-sm font-medium mb-2">Pronunciation:</p>
                       <p className="text-sm text-muted-foreground">{selectedLetter.pronunciation}</p>
                     </div>
+                    {currentAudioError && (
+                      <div className="text-xs text-red-600">
+                        {currentAudioError}
+                      </div>
+                    )}
                     <div>
                       <p className="text-sm font-medium mb-2">Letter Forms (positions in word):</p>
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">

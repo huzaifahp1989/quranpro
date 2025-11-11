@@ -7,7 +7,7 @@ interface VerseDisplayProps {
   verse: VerseWithTranslations;
   isHighlighted?: boolean;
   onVerseClick?: (verseNumber: number) => void;
-  onPlayClick?: (verseNumberInSurah: number) => void;
+  onPlayClick?: (globalAyahNumber: number) => void;
 }
 
 export function VerseDisplay({ verse, isHighlighted, onVerseClick, onPlayClick }: VerseDisplayProps) {
@@ -15,7 +15,7 @@ export function VerseDisplay({ verse, isHighlighted, onVerseClick, onPlayClick }
 
   const handlePlayClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onPlayClick?.(ayah.numberInSurah);
+    onPlayClick?.(ayah.number);
   };
 
   return (
@@ -56,9 +56,9 @@ export function VerseDisplay({ verse, isHighlighted, onVerseClick, onPlayClick }
         </div>
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-5">
         <div 
-          className="font-arabic text-2xl sm:text-3xl leading-loose text-right" 
+          className="font-arabic arabic-readable text-3xl sm:text-4xl leading-[2.15] sm:leading-[2] text-right"
           dir="rtl"
           lang="ar"
           data-testid={`text-arabic-${ayah.numberInSurah}`}
@@ -67,7 +67,7 @@ export function VerseDisplay({ verse, isHighlighted, onVerseClick, onPlayClick }
         </div>
 
         {urduTranslation && (
-          <div className="pt-3 border-t border-border/50">
+          <div className="pt-4 border-t border-border/50">
             <div className="flex items-center gap-2 mb-1.5">
               <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                 Urdu
@@ -84,7 +84,7 @@ export function VerseDisplay({ verse, isHighlighted, onVerseClick, onPlayClick }
         )}
 
         {englishTranslation && (
-          <div className="pt-3 border-t border-border/50">
+          <div className="pt-4 border-t border-border/50">
             <div className="flex items-center gap-2 mb-1.5">
               <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                 English
