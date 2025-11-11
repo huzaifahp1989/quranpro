@@ -1,4 +1,4 @@
-import { Switch, Route, Link, Router } from "wouter";
+import { Switch, Route, Link } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -19,7 +19,6 @@ import { Contact } from "./pages/imediac/Contact";
 
 function Router() {
   return (
-    <Router base={import.meta.env.BASE_URL}>
       <Switch>
       <Route path="/" component={QuranReader} />
       <Route path="/hadith" component={HadithBrowser} />
@@ -32,8 +31,7 @@ function Router() {
       <Route path="/imediac/about" component={About} />
       <Route path="/imediac/contact" component={Contact} />
       <Route component={NotFound} />
-      </Switch>
-    </Router>
+    </Switch>
   );
 }
 
