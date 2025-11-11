@@ -13,6 +13,7 @@ import { Surah, VerseWithTranslations, Tafseer, availableReciters } from "@share
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function QuranReader() {
+  const isStatic = typeof window !== 'undefined' && window.location.hostname.endsWith('github.io');
   const [selectedSurah, setSelectedSurah] = useState(1);
   const [selectedJuz, setSelectedJuz] = useState<number | null>(null);
   const [viewMode, setViewMode] = useState<'surah' | 'juz'>('surah');
@@ -30,29 +31,79 @@ export default function QuranReader() {
   // Light-only mode: remove dark theme handling
 
   const { data: surahs, isLoading: isSurahsLoading } = useQuery<Surah[]>({
-    queryKey: ['/api/surahs'],
+    queryKey: isStatic ? ['static/surahs'] : ['/api/surahs'],
+    queryFn: isStatic
+      ? async () => {
+          const res = await fetch('https://api.alquran.cloud/v1/surah');
+          const payload = await res.json();
+          const list = (payload?.data ?? []) as any[];
+          return list.map((s: any) => ({
+            number: s.number,
+            name: s.name,
+            englishName: s.englishName,
+            englishNameTranslation: s.englishNameTranslation,
+            numberOfAyahs: s.numberOfAyahs,
+            revelationType: s.revelationType,
+          } as Surah));
+        }
+      : undefined,
   });
 
   const { data: juzIndex } = useQuery<{ number: number; startSurah: number; startAyah: number; endSurah: number; endAyah: number }[]>({
     queryKey: ['/api/juz-index'],
+    enabled: !isStatic,
   });
 
   const { data: verses, isLoading: isVersesLoading, error: versesError } = useQuery<VerseWithTranslations[]>({
-    queryKey: viewMode === 'surah'
-      ? ['/api/surah', selectedSurah, selectedReciter]
-      : ['/api/juz', selectedJuz ?? 0, selectedReciter],
-    enabled: viewMode === 'surah' ? selectedSurah > 0 : (selectedJuz !== null),
+    queryKey: isStatic
+      ? ['static/surah', selectedSurah]
+      : (viewMode === 'surah'
+          ? ['/api/surah', selectedSurah, selectedReciter]
+          : ['/api/juz', selectedJuz ?? 0, selectedReciter]),
+    queryFn: isStatic
+      ? async () => {
+          const editions = ['quran-uthmani', 'en.sahih'];
+          const res = await fetch(`https://api.alquran.cloud/v1/surah/${selectedSurah}/editions/${editions.join(',')}`);
+          const payload = await res.json();
+          const [ar, en] = (payload?.data ?? []) as any[];
+          const arAyahs = (ar?.ayahs ?? []) as any[];
+          const enAyahs = (en?.ayahs ?? []) as any[];
+          const byNumberInSurah = new Map<number, any>();
+          enAyahs.forEach((a: any) => byNumberInSurah.set(a.numberInSurah, a));
+          const combined: VerseWithTranslations[] = arAyahs.map((a: any) => {
+            const enA = byNumberInSurah.get(a.numberInSurah);
+            return {
+              ayah: {
+                number: a.number,
+                numberInSurah: a.numberInSurah,
+                text: a.text,
+              },
+              englishTranslation: enA ? { text: enA.text, language: 'en', translator: 'Sahih International' } : undefined,
+            } as VerseWithTranslations;
+          });
+          return combined;
+        }
+      : undefined,
+    enabled: isStatic ? (viewMode === 'surah' && selectedSurah > 0) : (viewMode === 'surah' ? selectedSurah > 0 : (selectedJuz !== null)),
   });
 
   const [tafseerSurahNumber, setTafseerSurahNumber] = useState<number | null>(null);
   const { data: tafseer, isLoading: isTafseerLoading } = useQuery<Tafseer>({
     queryKey: [tafseerEdition === 'arabic' ? '/api/tafseer' : '/api/tafseer/maarif', tafseerSurahNumber, selectedVerseForTafseer],
-    enabled: selectedVerseForTafseer !== null && tafseerSurahNumber !== null && isTafseerOpen,
+    enabled: !isStatic && selectedVerseForTafseer !== null && tafseerSurahNumber !== null && isTafseerOpen,
   });
 
   const currentSurah = surahs?.find(s => s.number === selectedSurah);
   const currentVerseData = verses?.[currentIndex];
-  const audioUrl = currentVerseData?.ayah?.audio || null;
+  const audioUrl = (() => {
+    const globalNum = currentVerseData?.ayah?.number;
+    if (!globalNum) return null;
+    if (isStatic) {
+      const reciter = selectedReciter === 'ar.alafasy' ? 'ar.alafasy' : 'ar.alafasy';
+      return `https://cdn.islamic.network/quran/audio/128/${reciter}/${globalNum}.mp3`;
+    }
+    return currentVerseData?.ayah?.audio || null;
+  })();
 
   const handleSurahChange = (surahNumber: number) => {
     setViewMode('surah');
@@ -195,18 +246,25 @@ export default function QuranReader() {
                 currentSurah={currentVerseData?.ayah.surah?.number ?? selectedSurah}
                 currentAyah={currentVerseData?.ayah.numberInSurah ?? (currentIndex + 1)}
               />
-              <JuzSelector
-                surahs={surahs}
-                onJuzSelect={handleJuzSelect}
-                currentSurah={currentVerseData?.ayah.surah?.number ?? selectedSurah}
-                currentAyah={currentVerseData?.ayah.numberInSurah ?? (currentIndex + 1)}
-              />
+              {!isStatic && (
+                <JuzSelector
+                  surahs={surahs}
+                  onJuzSelect={handleJuzSelect}
+                  currentSurah={currentVerseData?.ayah.surah?.number ?? selectedSurah}
+                  currentAyah={currentVerseData?.ayah.numberInSurah ?? (currentIndex + 1)}
+                />
+              )}
             </div>
           )}
         </div>
       </header>
 
       <main className="max-w-4xl mx-auto px-6 sm:px-12 py-8 sm:py-12">
+        {isStatic && (
+          <div className="mb-4 p-3 rounded-lg border border-yellow-300 bg-yellow-50 text-yellow-800 text-sm">
+            Static demo on GitHub Pages: Backend features (Para mode, Tafseer API, audio proxy) are limited. Surah mode uses public AlQuran Cloud data.
+          </div>
+        )}
         {currentSurah && (
           <div className="mb-8 text-center">
             <h2 className="font-arabic text-4xl mb-2" data-testid="text-surah-name-arabic">
