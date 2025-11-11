@@ -1,4 +1,4 @@
-import { Switch, Route, Link } from "wouter";
+import { Router as WouterRouter, Switch, Route, Link } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -17,7 +17,7 @@ import { Pricing } from "./pages/imediac/Pricing";
 import { About } from "./pages/imediac/About";
 import { Contact } from "./pages/imediac/Contact";
 
-function Router() {
+function AppRoutes() {
   return (
       <Switch>
       <Route path="/" component={QuranReader} />
@@ -39,20 +39,22 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <Router />
+        <WouterRouter base={import.meta.env.BASE_URL}>
+          <AppRoutes />
+          
+          <Link href="/follow">
+            <Button
+              size="icon"
+              variant="default"
+              className="fixed bottom-36 left-6 h-14 w-14 rounded-full shadow-lg z-30"
+              data-testid="button-navigate-follow"
+              aria-label="Qur’an Follow"
+            >
+              <Book className="w-6 h-6" />
+            </Button>
+          </Link>
+        </WouterRouter>
         <Toaster />
-        
-        <Link href="/follow">
-          <Button
-            size="icon"
-            variant="default"
-            className="fixed bottom-36 left-6 h-14 w-14 rounded-full shadow-lg z-30"
-            data-testid="button-navigate-follow"
-            aria-label="Qur’an Follow"
-          >
-            <Book className="w-6 h-6" />
-          </Button>
-        </Link>
       </TooltipProvider>
     </QueryClientProvider>
   );
