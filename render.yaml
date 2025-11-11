@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: quranreaderpro
+    env: node
+    plan: free
+    region: oregon
+    autoDeploy: true
+    buildCommand: npm install && npm run build && npm run db:push
+    startCommand: npm run start
+    healthCheckPath: /
+    envVars:
+      - key: DATABASE_URL
+        sync: false
