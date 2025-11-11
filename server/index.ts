@@ -4,6 +4,9 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
+// Disable ETag to prevent 304 Not Modified responses breaking SPA/API fetches
+// React Query expects JSON bodies; 304 responses have no body and cause blank screens.
+app.set("etag", false);
 
 declare module 'http' {
   interface IncomingMessage {
@@ -16,6 +19,14 @@ app.use(express.json({
   }
 }));
 app.use(express.urlencoded({ extended: false }));
+
+// Avoid browser caching for API responses; always serve fresh JSON
+app.use((req, res, next) => {
+  if (req.path.startsWith("/api")) {
+    res.setHeader("Cache-Control", "no-store");
+  }
+  next();
+});
 
 app.use((req, res, next) => {
   const start = Date.now();
