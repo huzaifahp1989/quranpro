@@ -100,15 +100,14 @@ const tajweedRules: TajweedRule[] = [
   },
   {
     id: "madd",
-    title: "Madd (Prolongation)",
+    title: "Madd (Elongation) Rules",
     arabicTitle: "أحكام المد",
-    description: "Rules for elongating vowels. Madd means to stretch or prolong a sound.",
+    description: "Rules for elongating vowels in Arabic recitation.",
     keyPoints: [
-      "Madd Tabee'i (Natural) - 2 counts (harakat)",
-      "Madd Waajib Muttasil (Obligatory Connected) - 4-5 counts",
-      "Madd Jaa'iz Munfasil (Permissible Separated) - 2, 4, or 5 counts",
-      "Madd Laazim (Necessary) - 6 counts",
-      "Madd 'Aarid Lis-Sukoon (Presented Sukoon) - 2, 4, or 6 counts"
+      "Madd Tabee'i (Natural) - 2 counts",
+      "Madd Waajib Muttasil (Connected) - 4-5 counts",
+      "Madd Jaa'iz Munfasil (Separated) - 4-5 counts",
+      "Madd Laazim (Obligatory) - 6 counts"
     ],
     examples: [
       { arabic: "قَالَ", transliteration: "qāla", translation: "he said", reference: "Madd Tabee'i" },
@@ -119,14 +118,13 @@ const tajweedRules: TajweedRule[] = [
   },
   {
     id: "qalqalah",
-    title: "Qalqalah (Echoing Sound)",
+    title: "Qalqalah (Echo Sound)",
     arabicTitle: "القلقلة",
-    description: "A vibrating or bouncing sound produced when pronouncing specific letters with sukoon.",
+    description: "The echoing or bouncing sound produced when certain letters have sukoon.",
     keyPoints: [
-      "Five letters of Qalqalah: ق ط ب ج د",
-      "Remembered by the word: قُطْبُ جَدّ",
-      "Qalqalah Sughra (Minor) - in the middle of a word",
-      "Qalqalah Kubra (Major) - at the end of a word (stopping)"
+      "Letters of Qalqalah: ق ط ب ج د",
+      "Minor Qalqalah - when letter has sukoon",
+      "Major Qalqalah - when letter has shaddah"
     ],
     examples: [
       { arabic: "يَخْلُقُ", transliteration: "yakhluq", translation: "He creates", reference: "Qalqalah on ق" },
@@ -139,12 +137,12 @@ const tajweedRules: TajweedRule[] = [
     id: "ghunnah",
     title: "Ghunnah (Nasal Sound)",
     arabicTitle: "الغنة",
-    description: "A nasal sound that comes from the nose, lasting 2 counts (harakat).",
+    description: "The nasal sound produced from the nose when pronouncing ن and م.",
     keyPoints: [
-      "Found with م and ن when they have shaddah or are part of Idghaam",
       "Duration: 2 counts",
-      "Comes from the nasal passage",
-      "Present in Ikhfaa, Idghaam, and Iqlaab"
+      "Produced from the nose",
+      "Occurs with ن and م",
+      "Increased with Idghaam and Ikhfaa"
     ],
     examples: [
       { arabic: "مِنَ النَّاسِ", transliteration: "mina an-nās", translation: "from the people", reference: "Al-Baqarah 2:8 - Ghunnah with Idghaam" },
@@ -153,14 +151,14 @@ const tajweedRules: TajweedRule[] = [
     ]
   },
   {
-    id: "ra",
-    title: "Raa' - Heavy & Light",
+    id: "raa-rules",
+    title: "Rules of Raa (Heavy & Light)",
     arabicTitle: "أحكام الراء - التفخيم والترقيق",
-    description: "Rules for pronouncing the letter Raa (ر) with Tafkheem (heavy/thick) or Tarqeeq (light/thin).",
+    description: "Rules for pronouncing the letter Raa (ر) as heavy or light.",
     keyPoints: [
-      "Heavy (Tafkheem): When Raa has Fatha, Damma, or comes after heavy letters",
-      "Light (Tarqeeq): When Raa has Kasra or comes after light letters",
-      "Special cases depend on surrounding letters and vowels"
+      "Heavy Raa - with Fatha or Damma",
+      "Light Raa - with Kasra or after Kasra",
+      "Exception: After ي in same word"
     ],
     examples: [
       { arabic: "رَبِّ", transliteration: "rabbi", translation: "my Lord", reference: "Heavy Raa with Fatha" },
@@ -170,14 +168,14 @@ const tajweedRules: TajweedRule[] = [
     ]
   },
   {
-    id: "laam-allah",
-    title: "Laam of Allah's Name",
+    id: "laam-tajweed",
+    title: "Laam in Allah's Name",
     arabicTitle: "لام لفظ الجلالة",
-    description: "Rules for pronouncing the Laam in the word 'Allah' (الله).",
+    description: "Rules for pronouncing the Laam in the name of Allah (الله).",
     keyPoints: [
-      "Heavy (Tafkheem): When preceded by Fatha or Damma - اللَّه / اللَّهُ",
-      "Light (Tarqeeq): When preceded by Kasra - اللَّهِ",
-      "Affects the pronunciation of the entire blessed name"
+      "Heavy Laam - with Fatha or Damma",
+      "Light Laam - with Kasra",
+      "Always heavy if preceded by ال (the)"
     ],
     examples: [
       { arabic: "بِسْمِ اللَّهِ", transliteration: "bismillāh", translation: "In the name of Allah", reference: "Al-Fatihah 1:1 - Light Laam" },
@@ -205,7 +203,6 @@ const tajweedRules: TajweedRule[] = [
   }
 ];
 
-// Map Arabic letters to audio filenames (using Arabic character as key to avoid name duplicates)
 // Map to actual filenames present in client/public/audio/letters/
 // If you change filenames in that folder, update these values to match exactly (without .mp3 extension)
 // Map Arabic letters to available audio filenames in /public/audio/letters
@@ -302,43 +299,31 @@ export function QaidahSection() {
         currentAudioRef.current = audio;
       }
 
-      // Pause any current playback and update the source
-      audio.pause();
-      audio.oncanplaythrough = null; // clear old handler
-      audio.src = audioUrl;
-      audio.load();
+      // If the audio is already playing, pause it first
+      if (!audio.paused) {
+        audio.pause();
+      }
 
-      audio.oncanplaythrough = () => {
-        if (currentAudioRef.current === audio) {
-          audio.play().catch(error => {
-            const name = (error && (error as any).name) ? (error as any).name : '';
-            // Ignore AbortError which is benign when switching sources quickly
-            if (String(name).includes('Abort')) return;
-            setCurrentAudioError(`Playback error: ${String(error)}`);
-          });
-        }
-      };
+      // Set the new source and play
+      audio.src = audioUrl;
+      audio.currentTime = 0;
+      await audio.play();
     } catch (error) {
-      console.error('Error in audio playback:', error);
-      setCurrentAudioError(`Unexpected error: ${String(error)}`);
+      // Silently ignore common user gesture errors; log others
+      const message = (error as Error).message || '';
+      if (!message.includes('user gesture') && !message.includes('play()')) {
+        console.error('Audio playback error:', error);
+      }
+      setCurrentAudioError('Could not play audio. Please try again.');
     }
   };
 
-  // For Tajweed examples (full verses), use Web Speech API
   const speak = (text: string) => {
-    if (!('speechSynthesis' in window)) {
-      console.log('Speech synthesis not available');
-      return;
-    }
-
-    try {
-      window.speechSynthesis.cancel();
+    if ('speechSynthesis' in window) {
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = 'ar-SA';
-      utterance.rate = 0.7;
-      window.speechSynthesis.speak(utterance);
-    } catch (error) {
-      console.error('Error in speech synthesis:', error);
+      utterance.rate = 0.8;
+      speechSynthesis.speak(utterance);
     }
   };
 
@@ -380,7 +365,7 @@ export function QaidahSection() {
                     data-testid={`letter-${letter.name.toLowerCase()}-${letter.transliteration.toLowerCase()}`}
                   >
                     <CardContent className="p-4 text-center flex flex-col items-center justify-between gap-4 min-h-[180px]">
-                      <div className="text-5xl font-arabic leading-none mt-2">{letter.arabic}</div>
+                      <div className="text-5xl font-arabic arabic-letter-display leading-none mt-2">{letter.arabic}</div>
                       <div className="flex flex-col gap-1 w-full">
                         <div className="text-sm font-semibold break-words px-1">{letter.name}</div>
                         <div className="text-xs text-muted-foreground break-words px-1">{letter.transliteration}</div>
@@ -409,7 +394,7 @@ export function QaidahSection() {
                 <Card className="mt-6 bg-primary/5">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-4">
-                      <span className="text-5xl font-arabic">{selectedLetter.arabic}</span>
+                      <span className="text-5xl font-arabic arabic-letter-display">{selectedLetter.arabic}</span>
                       <div>
                         <div className="text-xl">{selectedLetter.name}</div>
                         <div className="text-sm text-muted-foreground">{selectedLetter.transliteration}</div>
@@ -436,19 +421,19 @@ export function QaidahSection() {
                       <p className="text-sm font-medium mb-2">Letter Forms (positions in word):</p>
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                         <div className="text-center">
-                          <div className="text-3xl font-arabic mb-1">{selectedLetter.position.isolated}</div>
+                          <div className="text-3xl font-arabic arabic-letter-display mb-1">{selectedLetter.position.isolated}</div>
                           <div className="text-xs text-muted-foreground">Isolated</div>
                         </div>
                         <div className="text-center">
-                          <div className="text-3xl font-arabic mb-1">{selectedLetter.position.initial}</div>
+                          <div className="text-3xl font-arabic arabic-letter-display mb-1">{selectedLetter.position.initial}</div>
                           <div className="text-xs text-muted-foreground">Initial</div>
                         </div>
                         <div className="text-center">
-                          <div className="text-3xl font-arabic mb-1">{selectedLetter.position.medial}</div>
+                          <div className="text-3xl font-arabic arabic-letter-display mb-1">{selectedLetter.position.medial}</div>
                           <div className="text-xs text-muted-foreground">Medial</div>
                         </div>
                         <div className="text-center">
-                          <div className="text-3xl font-arabic mb-1">{selectedLetter.position.final}</div>
+                          <div className="text-3xl font-arabic arabic-letter-display mb-1">{selectedLetter.position.final}</div>
                           <div className="text-xs text-muted-foreground">Final</div>
                         </div>
                       </div>
@@ -461,90 +446,85 @@ export function QaidahSection() {
         </TabsContent>
 
         <TabsContent value="tajweed">
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span>Tajweed Rules</span>
-                <span className="font-arabic text-2xl">أحكام التجويد</span>
-              </CardTitle>
-              <CardDescription>
-                Learn the essential rules of Quranic recitation with examples from the Quran
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {tajweedRules.map((rule) => (
-                  <Card
-                    key={rule.id}
-                    className="hover-elevate active-elevate-2 cursor-pointer transition-all"
-                    onClick={() => setSelectedRule(selectedRule?.id === rule.id ? null : rule)}
-                    data-testid={`tajweed-${rule.id}`}
-                    role="button"
-                    aria-expanded={selectedRule?.id === rule.id}
-                    aria-label={`${rule.title} - Click to expand`}
-                  >
-                    <CardHeader>
-                      <CardTitle className="flex items-center justify-between text-lg">
-                        <span>{rule.title}</span>
-                        <span className="font-arabic text-xl">{rule.arabicTitle}</span>
-                      </CardTitle>
-                      <CardDescription>{rule.description}</CardDescription>
-                    </CardHeader>
-                    
-                    {selectedRule?.id === rule.id && (
-                      <CardContent className="space-y-4 border-t pt-4">
-                        <div>
-                          <h4 className="font-semibold mb-2">Key Points:</h4>
-                          <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
-                            {rule.keyPoints.map((point, idx) => (
-                              <li key={idx}>{point}</li>
-                            ))}
-                          </ul>
-                        </div>
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <span>Tajweed Rules</span>
+                  <span className="font-arabic text-2xl">أحكام التجويد</span>
+                </CardTitle>
+                <CardDescription>
+                  Essential rules for proper Quranic recitation
+                </CardDescription>
+              </CardHeader>
+            </Card>
 
-                        <div>
-                          <h4 className="font-semibold mb-3">Examples:</h4>
-                          <div className="space-y-3">
-                            {rule.examples.map((example, idx) => (
-                              <div key={idx} className="p-4 bg-muted/50 rounded-lg">
-                                <div className="flex items-start justify-between gap-4 mb-2">
-                                  <div className="text-2xl font-arabic" dir="rtl">{example.arabic}</div>
-                                  <Button
-                                    size="icon"
-                                    variant="ghost"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      speak(example.arabic);
-                                    }}
-                                    className="h-8 w-8"
-                                    aria-label={`Hear pronunciation of example: ${example.transliteration}`}
-                                    data-testid={`button-speak-example-${rule.id}-${idx}`}
-                                  >
-                                    <Volume2 className="w-4 h-4" />
-                                  </Button>
-                                </div>
-                                <div className="text-sm italic text-muted-foreground mb-1">
-                                  {example.transliteration}
-                                </div>
-                                <div className="text-sm">{example.translation}</div>
-                                {example.reference && (
-                                  <Badge variant="outline" className="mt-2">
-                                    {example.reference}
-                                  </Badge>
-                                )}
+            <div className="space-y-4">
+              {tajweedRules.map((rule) => (
+                <Card key={rule.id}>
+                  <CardHeader>
+                    <CardTitle className="flex items-center justify-between">
+                      <span>{rule.title}</span>
+                      <span className="font-arabic text-xl">{rule.arabicTitle}</span>
+                    </CardTitle>
+                    <CardDescription>{rule.description}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <h4 className="font-semibold mb-2">Key Points:</h4>
+                      <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+                        {rule.keyPoints.map((point, index) => (
+                          <li key={index}>{point}</li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div>
+                      <h4 className="font-semibold mb-3">Examples:</h4>
+                      <div className="space-y-3">
+                        {rule.examples.map((example, index) => (
+                          <div key={index} className="p-3 bg-muted/50 rounded-lg">
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-3">
+                                <div className="text-2xl font-arabic arabic-letter-display" dir="rtl">{example.arabic}</div>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    speak(example.arabic);
+                                  }}
+                                  className="h-8 w-8"
+                                  aria-label={`Hear pronunciation of example: ${example.transliteration}`}
+                                  data-testid={`button-speak-example-${rule.id}-${idx}`}
+                                >
+                                  <Volume2 className="w-4 h-4" />
+                                </Button>
                               </div>
-                            ))}
+                              <div className="text-sm italic text-muted-foreground mb-1">
+                                {example.transliteration}
+                              </div>
+                            </div>
+                            <div className="text-sm italic text-muted-foreground mb-1">
+                              {example.transliteration}
+                            </div>
+                            <div className="text-sm">
+                              {example.translation}
+                            </div>
+                            {example.reference && (
+                              <div className="text-xs text-muted-foreground mt-2">
+                                Reference: {example.reference}
+                              </div>
+                            )}
                           </div>
-                        </div>
-                      </CardContent>
-                    )}
-                  </Card>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+                        ))}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
         </TabsContent>
       </Tabs>
     </div>
   );
-}
