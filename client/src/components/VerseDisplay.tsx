@@ -20,6 +20,7 @@ export function VerseDisplay({ verse, isHighlighted, onVerseClick, onPlayClick }
 
   return (
     <div
+      id={`verse-${ayah.number}`}
       className={cn(
         "group relative mb-4 p-4 sm:p-6 border-l-2 transition-all hover-elevate",
         isHighlighted 

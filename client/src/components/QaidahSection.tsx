@@ -269,7 +269,8 @@ export function QaidahSection() {
       // Get the audio filename for this letter
       const audioFilename = letterAudioMap[arabicLetter];
       if (!audioFilename) {
-        console.error(`No audio file found for letter: ${arabicLetter}`);
+        setCurrentAudioError('Audio unavailable. Falling back to speech.');
+        speak(arabicLetter);
         return;
       }
 
@@ -314,7 +315,8 @@ export function QaidahSection() {
       if (!message.includes('user gesture') && !message.includes('play()')) {
         console.error('Audio playback error:', error);
       }
-      setCurrentAudioError('Could not play audio. Please try again.');
+      setCurrentAudioError('Could not play audio. Falling back to speech.');
+      speak(arabicLetter);
     }
   };
 
@@ -365,7 +367,7 @@ export function QaidahSection() {
                     data-testid={`letter-${letter.name.toLowerCase()}-${letter.transliteration.toLowerCase()}`}
                   >
                     <CardContent className="p-4 text-center flex flex-col items-center justify-between gap-4 min-h-[180px]">
-                      <div className="text-5xl font-arabic arabic-letter-display leading-none mt-2">{letter.arabic}</div>
+                      <div className="text-5xl font-arabic arabic-letter-display mt-2">{letter.arabic}</div>
                       <div className="flex flex-col gap-1 w-full">
                         <div className="text-sm font-semibold break-words px-1">{letter.name}</div>
                         <div className="text-xs text-muted-foreground break-words px-1">{letter.transliteration}</div>
@@ -495,7 +497,7 @@ export function QaidahSection() {
                                   }}
                                   className="h-8 w-8"
                                   aria-label={`Hear pronunciation of example: ${example.transliteration}`}
-                                  data-testid={`button-speak-example-${rule.id}-${idx}`}
+                                  data-testid={`button-speak-example-${rule.id}-${index}`}
                                 >
                                   <Volume2 className="w-4 h-4" />
                                 </Button>
@@ -528,3 +530,4 @@ export function QaidahSection() {
       </Tabs>
     </div>
   );
+}

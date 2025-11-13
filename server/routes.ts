@@ -12,7 +12,7 @@ import path from "path";
 const ALQURAN_CLOUD_API = "https://api.alquran.cloud/v1";
 const QURAN_TAFSEER_API = "http://api.quran-tafseer.com";
 // External CDN for English Tafsir (Maarif-ul-Quran)
-const TAFSIR_CDN_BASE = "https://cdn.jsdelivr.net/gh/spa5k/tafsir_api@master/tafseer";
+const TAFSIR_CDN_BASE = "https://cdn.jsdelivr.net/gh/spa5k/tafsir_api@main/tafsir";
 
 // Simple in-memory cache
 const cache = new Map<string, { data: any; timestamp: number }>();
@@ -345,6 +345,162 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get('/api/search', async (req, res) => {
+    try {
+      const q = (req.query.q || '').toString().trim();
+      if (!q) {
+        return res.status(400).json({ error: 'Missing query' });
+      }
+      const cacheKey = `search-${q}`;
+      const cached = getFromCache(cacheKey);
+      if (cached) {
+        return res.json(cached);
+      }
+      const url = `${ALQURAN_CLOUD_API}/search/${encodeURIComponent(q)}/quran-uthmani`;
+      const response = await axios.get(url, { timeout: 15000 });
+      if (response.data && response.data.code === 200 && response.data.data) {
+        const items = Array.isArray(response.data.data.matches) ? response.data.data.matches : [];
+        const results = items.map((m: any) => ({
+          text: m.text || '',
+          surah: {
+            number: m.surah?.number || 0,
+            name: m.surah?.name || '',
+            englishName: m.surah?.englishName || ''
+          },
+          ayah: {
+            number: m.number || 0,
+            numberInSurah: m.numberInSurah || 0
+          }
+        }));
+        setCache(cacheKey, { results });
+        return res.json({ results });
+      }
+      return res.status(404).json({ error: 'No matches found' });
+    } catch (error: any) {
+      const msg = error?.message || '';
+      if (error?.code === 'ECONNABORTED') {
+        return res.status(504).json({ error: 'Search timeout' });
+      }
+      return res.status(500).json({ error: msg || 'Search failed' });
+    }
+  });
+
+  app.get('/api/search/en', async (req, res) => {
+    try {
+      const q = (req.query.q || '').toString().trim();
+      if (!q) {
+        return res.status(400).json({ error: 'Missing query' });
+      }
+      const cacheKey = `search-en-${q}`;
+      const cached = getFromCache(cacheKey);
+      if (cached) {
+        return res.json(cached);
+      }
+      const url = `${ALQURAN_CLOUD_API}/search/${encodeURIComponent(q)}/en.sahih`;
+      const response = await axios.get(url, { timeout: 15000 });
+      if (response.data && response.data.code === 200 && response.data.data) {
+        const items = Array.isArray(response.data.data.matches) ? response.data.data.matches : [];
+        const results = items.map((m: any) => ({
+          englishText: m.text || '',
+          surah: {
+            number: m.surah?.number || 0,
+            name: m.surah?.name || '',
+            englishName: m.surah?.englishName || ''
+          },
+          ayah: {
+            number: m.number || 0,
+            numberInSurah: m.numberInSurah || 0
+          }
+        }));
+        setCache(cacheKey, { results });
+        return res.json({ results });
+      }
+      return res.status(404).json({ error: 'No matches found' });
+    } catch (error: any) {
+      const msg = error?.message || '';
+      if (error?.code === 'ECONNABORTED') {
+        return res.status(504).json({ error: 'Search timeout' });
+      }
+      return res.status(500).json({ error: msg || 'Search failed' });
+    }
+  });
+
+  app.get('/api/ayah/:ayah', async (req, res) => {
+    try {
+      const { ayah } = req.params as { ayah: string };
+      const ayahNum = parseInt(ayah, 10);
+      if (Number.isNaN(ayahNum) || ayahNum < 1) {
+        return res.status(400).json({ error: 'Invalid ayah number' });
+      }
+      const reciterEdition = (req.query.reciter as string) || 'ar.alafasy';
+      const editions = `quran-uthmani,${reciterEdition},ur.jalandhry,en.sahih`;
+      const cacheKey = `ayah-${ayahNum}-${reciterEdition}`;
+      const cached = getFromCache(cacheKey);
+      if (cached) {
+        return res.json(cached);
+      }
+      const url = `${ALQURAN_CLOUD_API}/ayah/${ayahNum}/editions/${editions}`;
+      const response = await axios.get(url, { timeout: 15000 });
+      if (!(response.data && response.data.code === 200 && Array.isArray(response.data.data))) {
+        return res.status(404).json({ error: 'Ayah not found' });
+      }
+      const [arabicData, audioData, urduData, englishData] = response.data.data;
+
+      // Determine Juz (Para) using local map
+      let juzNumber: number | null = null;
+      try {
+        const filePath = path.join(process.cwd(), 'public', 'data', 'juz_map.json');
+        const raw = await fs.readFile(filePath, 'utf-8');
+        const entries: Array<{ surah: number; ayah: number; juz: number }> = JSON.parse(raw);
+        const found = entries.find(e => e.surah === (arabicData.surah?.number ?? arabicData.numberInSurah?.surah) && e.ayah === arabicData.numberInSurah);
+        if (found) juzNumber = found.juz;
+      } catch {}
+
+      // Determine Mushaf page number using local map
+      let pageNumber: number | null = null;
+      try {
+        const filePath = path.join(process.cwd(), 'public', 'data', 'page_map.json');
+        const raw = await fs.readFile(filePath, 'utf-8');
+        const entries: Array<{ surah: number; ayah: number; page: number }> = JSON.parse(raw);
+        const found = entries.find(e => e.surah === (arabicData.surah?.number ?? arabicData.numberInSurah?.surah) && e.ayah === arabicData.numberInSurah);
+        if (found) pageNumber = found.page;
+      } catch {}
+
+      const result = {
+        ayah: {
+          number: arabicData.number,
+          numberInSurah: arabicData.numberInSurah,
+          text: arabicData.text,
+          audio: `/api/audio/128/${reciterEdition}/${arabicData.number}.mp3`,
+          surah: {
+            number: arabicData.surah?.number,
+            name: arabicData.surah?.name,
+            englishName: arabicData.surah?.englishName,
+          },
+          juzNumber: juzNumber,
+          pageNumber: pageNumber,
+        },
+        urduTranslation: {
+          text: urduData.text || '',
+          language: 'Urdu',
+          translator: 'Fateh Muhammad Jalandhry',
+        },
+        englishTranslation: {
+          text: englishData.text || '',
+          language: 'English',
+          translator: 'Sahih International',
+        },
+      };
+      setCache(cacheKey, result);
+      return res.json(result);
+    } catch (error: any) {
+      if (error?.code === 'ECONNABORTED') {
+        return res.status(504).json({ error: 'Request timeout' });
+      }
+      return res.status(500).json({ error: error?.message || 'Failed to fetch ayah' });
+    }
+  });
+
   // Upload user recording (audio/webm) and save under public/recordings
   app.post('/api/upload-recording', express.raw({ type: '*/*', limit: '50mb' }), async (req, res) => {
     try {
@@ -452,7 +608,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } catch {}
 
       // Fallback to CDN: spa5k/tafsir_api
-      // Expected path: /tafseer/en-tafsir-maarif-ul-quran/<surah>/<ayah>.json
       const edition = 'en-tafsir-maarif-ul-quran';
       const remoteUrl = `${TAFSIR_CDN_BASE}/${edition}/${surahNum}/${ayahNum}.json`;
       try {

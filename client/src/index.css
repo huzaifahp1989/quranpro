@@ -16,17 +16,17 @@
   --elevate-1: rgba(0,0,0, .03);
   --elevate-2: rgba(0,0,0, .08);
 
-  --background: 70.91 21.57% 90%;
+  --background: 0 0% 98%;
 
   --foreground: 0 0% 8.24%;
 
   --border: 35 10.53% 77.65%;
 
-  --card: 180 6.6667% 97.0588%;
+  --card: 0 0% 98%;
 
   --card-foreground: 210 25% 7.8431%;
 
-  --card-border: 0 0% 91%;
+  --card-border: 0 0% 88%;
 
   --sidebar: 180 6.6667% 97.0588%;
 
@@ -44,7 +44,7 @@
 
   --sidebar-ring: 202.8169 89.1213% 53.1373%;
 
-  --popover: 0 0% 100%;
+  --popover: 0 0% 98%;
 
   --popover-foreground: 210 25% 7.8431%;
 
@@ -58,7 +58,7 @@
 
   --secondary-foreground: 203.8863 88.2845% 53.1373%;
 
-  --muted: 210 25% 90.5882%;
+  --muted: 0 0% 93%;
 
   --muted-foreground: 210 25% 40%;
 
@@ -304,7 +304,7 @@
     /* Ensure minimum spacing around letters */
     margin: 0.125rem;
     /* Prevent letter overlapping with proper line height */
-    line-height: 1.6;
+    line-height: 1.35;
     /* Ensure proper font sizing for clarity */
     font-weight: 500;
     /* Improve letter spacing for Arabic text */
@@ -313,5 +313,8 @@
     word-spacing: 0.06em;
     /* Ensure proper display direction */
     direction: rtl;
+    /* Ensure layout prevents overlap */
+    display: inline-block;
+    white-space: nowrap;
   }
 }

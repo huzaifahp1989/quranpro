@@ -4,11 +4,12 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
-import { Book } from "lucide-react";
+import { Book, Mic } from "lucide-react";
 import QuranReader from "@/pages/QuranReader";
 import QuranFollow from "@/pages/QuranFollow";
 import HadithBrowser from "@/pages/HadithBrowser";
 import KidsLearning from "@/pages/KidsLearning";
+import Transcribe from "@/pages/Transcribe";
 import NotFound from "@/pages/not-found";
 import IMediaCHome from "./pages/imediac/Home";
 import { Services } from "./pages/imediac/Services";
@@ -23,6 +24,7 @@ function AppRoutes() {
       <Route path="/" component={QuranReader} />
       <Route path="/hadith" component={HadithBrowser} />
       <Route path="/kids" component={KidsLearning} />
+      <Route path="/transcribe" component={Transcribe} />
       <Route path="/follow" component={QuranFollow} />
         <Route path="/imediac" component={IMediaCHome} />
       <Route path="/imediac/services" component={Services} />
@@ -42,15 +44,15 @@ function App() {
         <WouterRouter base={import.meta.env.BASE_URL}>
           <AppRoutes />
           
-          <Link href="/follow">
+          <Link href="/transcribe">
             <Button
               size="icon"
               variant="default"
               className="fixed bottom-36 left-6 h-14 w-14 rounded-full shadow-lg z-30"
-              data-testid="button-navigate-follow"
-              aria-label="Qur’an Follow"
+              data-testid="button-navigate-transcribe"
+              aria-label="Transcribe Recitation"
             >
-              <Book className="w-6 h-6" />
+              <Mic className="w-6 h-6" />
             </Button>
           </Link>
         </WouterRouter>

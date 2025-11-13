@@ -95,6 +95,16 @@ export default function QuranReader() {
     }
   };
 
+  useEffect(() => {
+    const globalAyah = currentVerseData?.ayah?.number;
+    if (globalAyah) {
+      const el = document.getElementById(`verse-${globalAyah}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+  }, [currentVerseData?.ayah?.number]);
+
   const handleVerseClick = (globalAyahNumber: number) => {
     const verseIndex = verses?.findIndex(v => v.ayah.number === globalAyahNumber);
     if (verses && verseIndex !== undefined && verseIndex >= 0) {
@@ -173,6 +183,18 @@ export default function QuranReader() {
                   <Book className="w-4 h-4" />
                   <span className="hidden md:inline">Browse Hadith</span>
                   <span className="md:hidden">Hadith</span>
+                </Button>
+              </Link>
+              <Link href="/transcribe">
+                <Button
+                  variant="default"
+                  size="default"
+                  data-testid="button-nav-transcribe"
+                  className="gap-2"
+                >
+                  <BookOpen className="w-4 h-4" />
+                  <span className="hidden md:inline">Transcribe Recitation</span>
+                  <span className="md:hidden">Transcribe</span>
                 </Button>
               </Link>
               {/* Theme toggle removed: light-only mode */}
