@@ -9,10 +9,17 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Amiri+Quran&family=Scheherazade+New:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Noto+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <script type="module" crossorigin src="/quranpro/assets/index-C2QZkIPG.js"></script>
+    <script type="module" crossorigin src="/quranpro/assets/index-C9O1QTBR.js"></script>
     <link rel="stylesheet" crossorigin href="/quranpro/assets/index-b_pLd3Va.css">
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      window.__API_BASE__ = (function(){
+        try {
+          return new URL(document.currentScript?.src)?.searchParams?.get('api') || '';
+        } catch { return '' }
+      })();
+    </script>
   </body>
 </html>
