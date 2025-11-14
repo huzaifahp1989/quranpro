@@ -487,7 +487,7 @@ export function QaidahSection() {
                           <div key={index} className="p-3 bg-muted/50 rounded-lg">
                             <div className="flex items-center justify-between mb-2">
                               <div className="flex items-center gap-3">
-                                <div className="text-2xl font-arabic arabic-letter-display" dir="rtl">{example.arabic}</div>
+                                <div className="text-2xl font-arabic arabic-letter-display cursor-pointer" dir="rtl" onClick={(e)=>{ e.stopPropagation(); speak(example.arabic); }}>{example.arabic}</div>
                                 <Button
                                   size="icon"
                                   variant="ghost"

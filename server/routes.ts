@@ -607,33 +607,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       } catch {}
 
-      // Fallback to CDN: spa5k/tafsir_api
+      // Fallback to CDN mirrors: spa5k/tafsir_api
       const edition = 'en-tafsir-maarif-ul-quran';
-      const remoteUrl = `${TAFSIR_CDN_BASE}/${edition}/${surahNum}/${ayahNum}.json`;
-      try {
-        const response = await axios.get(remoteUrl, { timeout: 15000 });
-        if (response.status >= 200 && response.status < 300 && response.data) {
-          const data = response.data;
-          const text = (typeof data === 'string') ? data : (data.text || data.content || JSON.stringify(data));
-          const tafseer = {
-            ayahNumber: ayahNum,
-            text,
-            tafseerName: "Maarif-ul-Quran",
-            language: "English",
-          };
-          setCache(cacheKey, tafseer);
-          return res.json(tafseer);
+      const mirrors = [
+        `${TAFSIR_CDN_BASE}/${edition}/${surahNum}/${ayahNum}.json`,
+        `https://cdn.statically.io/gh/spa5k/tafsir_api/main/tafsir/${edition}/${surahNum}/${ayahNum}.json`,
+        `https://rawcdn.githack.com/spa5k/tafsir_api/main/tafseer/${edition}/${surahNum}/${ayahNum}.json`,
+        `https://raw.githubusercontent.com/spa5k/tafsir_api/main/tafsir/${edition}/${surahNum}/${ayahNum}.json`,
+      ];
+      for (const url of mirrors) {
+        try {
+          const response = await axios.get(url, { timeout: 15000 });
+          if (response.status >= 200 && response.status < 300 && response.data) {
+            const data = response.data;
+            const text = (typeof data === 'string') ? data : (data.text || data.content || JSON.stringify(data));
+            const tafseer = {
+              ayahNumber: ayahNum,
+              text,
+              tafseerName: "Maarif-ul-Quran",
+              language: "English",
+            };
+            setCache(cacheKey, tafseer);
+            return res.json(tafseer);
+          }
+        } catch (error: any) {
+          // try next mirror
+          continue;
         }
-        return res.status(404).json({ error: "Tafseer not found for this verse" });
-      } catch (error: any) {
-        console.error("Maarif Tafseer fetch error:", error?.message || error);
-        if (error?.response?.status === 404) {
-          return res.status(404).json({ error: "Tafseer not available for this verse" });
-        } else if (error?.code === 'ECONNABORTED') {
-          return res.status(504).json({ error: "Request timeout - please try again" });
-        }
-        return res.status(500).json({ error: "Failed to fetch Maarif-ul-Quran tafseer" });
       }
+      return res.status(404).json({ error: "Tafseer not available for this verse" });
     } catch (error: any) {
       console.error("Error in Maarif Tafseer route:", error?.message || error);
       return res.status(500).json({ error: "Internal server error" });

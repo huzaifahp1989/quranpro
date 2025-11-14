@@ -59,10 +59,11 @@ export function VerseDisplay({ verse, isHighlighted, onVerseClick, onPlayClick }
 
       <div className="space-y-5">
         <div 
-          className="font-arabic arabic-readable text-3xl sm:text-4xl leading-[2.15] sm:leading-[2] text-right"
+          className="font-arabic arabic-readable text-3xl sm:text-4xl leading-[2.15] sm:leading-[2] text-right cursor-pointer"
           dir="rtl"
           lang="ar"
           data-testid={`text-arabic-${ayah.numberInSurah}`}
+          onClick={(e) => { e.stopPropagation(); onPlayClick?.(ayah.number); }}
         >
           {ayah.text}
         </div>

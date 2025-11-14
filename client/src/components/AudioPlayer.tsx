@@ -40,6 +40,8 @@ export function AudioPlayer({
   const audioRef = useRef<HTMLAudioElement>(null);
   // Fallback quality handling: try 128kbps, then 64, then 32
   const [qualityOverride, setQualityOverride] = useState<128 | 64 | 32 | null>(null);
+  // Reciter fallback for CDN playback
+  const [reciterOverride, setReciterOverride] = useState<string | null>(null);
 
   // Build effective URL based on quality override
   const effectiveAudioUrl = (() => {
@@ -51,7 +53,11 @@ export function AudioPlayer({
       return audioUrl.replace(/\/api\/audio\/\d+\//, `/api/audio/${qualityOverride}/`);
     }
     // Fallback for direct CDN URLs
-    return audioUrl.replace(/\/audio\/\d+\//, `/audio/${qualityOverride}/`);
+    let url = audioUrl.replace(/\/audio\/\d+\//, `/audio/${qualityOverride}/`);
+    if (reciterOverride && /cdn\.islamic\.network\/quran\/audio\//.test(url)) {
+      url = url.replace(/(quran\/audio\/\d+\/)[^/]+(\/)/, `$1${reciterOverride}$2`);
+    }
+    return url;
   })();
 
   useEffect(() => {
@@ -101,15 +107,29 @@ export function AudioPlayer({
     const handleError = () => {
       // On error, try lower bitrate fallbacks
       if (audioUrl) {
+        // First try lowering quality, then try reciter fallback list
         if (qualityOverride === null) {
           setQualityOverride(64);
+          return;
         } else if (qualityOverride === 64) {
           setQualityOverride(32);
-        } else {
-          console.error("Audio failed to load for URL:", audioUrl);
-          setIsPlaying(false);
-          onPlayingChange?.(false);
+          return;
         }
+        // Reciter fallback for CDN
+        if (/cdn\.islamic\.network\/quran\/audio\//.test(audioUrl)) {
+          const FALLBACKS = ['ar.alafasy', 'ar.husary', 'ar.minshawi', 'ar.shaatree', 'ar.abdulbasitmurattal'];
+          const current = (audioUrl.match(/quran\/audio\/\d+\/(.*?)\//)?.[1]) || '';
+          const next = FALLBACKS.find(r => r !== current && r !== reciterOverride);
+          if (next) {
+            setReciterOverride(next);
+            // Attempt immediate replay
+            try { audio.play(); } catch {}
+            return;
+          }
+        }
+        console.error("Audio failed to load for URL:", audioUrl);
+        setIsPlaying(false);
+        onPlayingChange?.(false);
       }
     };
 

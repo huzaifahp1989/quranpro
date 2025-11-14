@@ -111,11 +111,11 @@ export type ReadingState = z.infer<typeof readingStateSchema>;
 
 // Available reciters with their identifiers for AlQuran Cloud API
 export const availableReciters: Reciter[] = [
-  { identifier: "ar.alafasy", name: "Mishary Rashid Alafasy", style: "Hafs" },
-  { identifier: "ar.abdulbasitmurattal", name: "Abdul Basit (Murattal)", style: "Hafs" },
-  { identifier: "ar.minshawi", name: "Mohamed Siddiq al-Minshawi (Murattal)", style: "Hafs" },
   { identifier: "ar.husary", name: "Mahmoud Khalil Al-Hussary", style: "Hafs" },
+  { identifier: "ar.alafasy", name: "Mishary Rashid Alafasy", style: "Hafs" },
+  { identifier: "ar.minshawi", name: "Mohamed Siddiq al-Minshawi (Murattal)", style: "Hafs" },
   { identifier: "ar.shaatree", name: "Abu Bakr al-Shatri", style: "Hafs" },
+  { identifier: "ar.abdulbasitmurattal", name: "Abdul Basit (Murattal)", style: "Hafs" },
 ];
 
 // Translation identifiers for AlQuran Cloud API

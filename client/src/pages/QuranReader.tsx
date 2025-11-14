@@ -158,6 +158,40 @@ export default function QuranReader() {
   const { data: tafseer, isLoading: isTafseerLoading } = useQuery<Tafseer>({
     queryKey: [tafseerEdition === 'arabic' ? '/api/tafseer' : '/api/tafseer/maarif', tafseerSurahNumber, selectedVerseForTafseer],
     enabled: selectedVerseForTafseer !== null && tafseerSurahNumber !== null && isTafseerOpen,
+    queryFn: async () => {
+      const surahNum = tafseerSurahNumber as number;
+      const ayahInSurah = selectedVerseForTafseer as number;
+      if (apiBase) {
+        const url = tafseerEdition === 'arabic'
+          ? `${apiBase}/api/tafseer/${surahNum}/${ayahInSurah}`
+          : `${apiBase}/api/tafseer/maarif/${surahNum}/${ayahInSurah}`;
+        const r = await fetch(url, { credentials: 'include' });
+        if (!r.ok) throw new Error(await r.text());
+        return await r.json();
+      }
+      // Static fallback via CDN mirrors
+      const edition = tafseerEdition === 'arabic' ? 'ar-tafsir-muyassar' : 'en-tafsir-maarif-ul-quran';
+      const mirrors = [
+        `https://cdn.jsdelivr.net/gh/spa5k/tafsir_api@main/tafsir/${edition}/${surahNum}/${ayahInSurah}.json`,
+        `https://cdn.statically.io/gh/spa5k/tafsir_api/main/tafsir/${edition}/${surahNum}/${ayahInSurah}.json`,
+        `https://rawcdn.githack.com/spa5k/tafsir_api/main/tafsir/${edition}/${surahNum}/${ayahInSurah}.json`,
+        `https://raw.githubusercontent.com/spa5k/tafsir_api/main/tafsir/${edition}/${surahNum}/${ayahInSurah}.json`,
+      ];
+      for (const url of mirrors) {
+        try {
+          const r = await axios.get(url, { timeout: 12000 });
+          const data = r.data;
+          const text = (typeof data === 'string') ? data : (data.text || data.content || JSON.stringify(data));
+          return {
+            ayahNumber: ayahInSurah,
+            text,
+            tafseerName: tafseerEdition === 'arabic' ? 'التفسير الميسر' : 'Maarif-ul-Quran',
+            language: tafseerEdition === 'arabic' ? 'Arabic' : 'English',
+          } as Tafseer;
+        } catch {}
+      }
+      throw new Error('Tafseer not available');
+    }
   });
 
   const currentSurah = surahs?.find(s => s.number === selectedSurah);
@@ -293,17 +327,6 @@ export default function QuranReader() {
                   <Book className="w-4 h-4" />
                   <span className="hidden md:inline">Browse Hadith</span>
                   <span className="md:hidden">Hadith</span>
-                </Button>
-              </Link>
-              <Link href="/tajweed-guide">
-                <Button
-                  variant="outline"
-                  size="default"
-                  data-testid="button-nav-tajweed"
-                  className="gap-2"
-                >
-                  <span className="hidden md:inline">Tajweed Guide</span>
-                  <span className="md:hidden">Tajweed</span>
                 </Button>
               </Link>
               <Link href="/transcribe">

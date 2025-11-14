@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import axios from "axios";
 import { useQuery } from "@tanstack/react-query";
 import { Search, Book, BookOpen, Loader2, GraduationCap } from "lucide-react";
 import { Link } from "wouter";
@@ -30,11 +31,58 @@ export default function HadithBrowser() {
     queryParams.set('search', searchQuery);
   }
   
-  const apiUrl = `/api/hadiths/${selectedCollection}?${queryParams.toString()}`;
-  
+  const apiBase = import.meta.env.VITE_API_BASE || '';
+  const pageSize = 20;
   const { data, isLoading, isFetching } = useQuery<HadithApiResponse>({
-    queryKey: [apiUrl],
+    queryKey: ['hadiths', selectedCollection, searchQuery, page],
     enabled: selectedCollection !== "",
+    queryFn: async () => {
+      if (apiBase) {
+        const apiUrl = `${apiBase}/api/hadiths/${selectedCollection}?${queryParams.toString()}`;
+        const r = await fetch(apiUrl, { credentials: 'include' });
+        if (!r.ok) throw new Error(await r.text());
+        return await r.json();
+      }
+      // Static fallback: load edition and filter/paginate client-side
+      const edition = `eng-${selectedCollection}`;
+      const url = `https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1/editions/${edition}.json`;
+      const r = await axios.get(url, { timeout: 15000 });
+      const hadithsAll = r.data?.hadiths || [];
+      let filtered = hadithsAll;
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        filtered = hadithsAll.filter((h: any) => (
+          (h.text?.toLowerCase().includes(q)) ||
+          (h.hadithnumber?.toString().includes(searchQuery)) ||
+          (h.arabicnumber?.toString().includes(searchQuery))
+        ));
+      }
+      const start = (page - 1) * pageSize;
+      const end = start + pageSize;
+      const slice = filtered.slice(start, end);
+      const mapped: Hadith[] = slice.map((h: any) => ({
+        collection: selectedCollection,
+        englishText: h.text || '',
+        arabicText: '',
+        urduText: '',
+        hadithNumber: (h.hadithnumber || h.arabicnumber || '').toString(),
+        narrator: '',
+        grade: h.grades && h.grades.length > 0 
+          ? h.grades.map((g: any) => typeof g === 'object' ? `${g.name || ''}: ${g.grade || ''}`.trim() : String(g)).join(', ')
+          : undefined,
+        reference: `${selectedCollection.charAt(0).toUpperCase() + selectedCollection.slice(1)} ${h.hadithnumber || h.arabicnumber || ''}`,
+        book: selectedCollection,
+        name: selectedCollection,
+        numberOfHadiths: 0,
+      }));
+      return {
+        collection: selectedCollection,
+        hadiths: mapped,
+        page,
+        pageSize,
+        hasMore: end < filtered.length,
+      } as HadithApiResponse;
+    }
   });
 
   // Accumulate hadiths when new data arrives

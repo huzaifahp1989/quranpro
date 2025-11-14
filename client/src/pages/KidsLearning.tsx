@@ -52,9 +52,11 @@ const learningSections: LearningSection[] = [
 ];
 
 const reciters = [
+  { id: "ar.husary", name: "Mahmoud Khalil Al-Hussary", shortName: "Husary" },
+  { id: "ar.alafasy", name: "Mishary Rashid Alafasy", shortName: "Alafasy" },
   { id: "ar.minshawi", name: "Mohamed Siddiq al-Minshawi (Murattal)", shortName: "Minshawi" },
-  { id: "ar.hudhaify", name: "Ali Bin Abdur-Rahman Al-Hudhaify", shortName: "Hudhaify" },
-  // Removed Sudais and Ghamdi per request
+  { id: "ar.shaatree", name: "Abu Bakr al-Shatri", shortName: "Shaatree" },
+  { id: "ar.abdulbasitmurattal", name: "Abdul Basit (Murattal)", shortName: "Abdul Basit" },
 ];
 
 export default function KidsLearning() {
@@ -335,7 +337,9 @@ export default function KidsLearning() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="text-center font-arabic text-3xl sm:text-4xl leading-loose mb-6 px-2" dir="rtl">
+                <div className="text-center font-arabic text-3xl sm:text-4xl leading-loose mb-6 px-2 cursor-pointer" dir="rtl" onClick={() => {
+                  const audio = audioRef.current; if (!audio) return; audio.currentTime = 0; audio.play().then(()=>setIsPlaying(true)).catch(()=>setIsPlaying(false));
+                }}>
                   {currentVerse.ayah.text}
                 </div>
                 
