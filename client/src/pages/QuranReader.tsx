@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import axios from "axios";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2, BookOpen, Book, GraduationCap } from "lucide-react";
 import { Link } from "wouter";
@@ -29,8 +30,27 @@ export default function QuranReader() {
 
   // Light-only mode: remove dark theme handling
 
+  const apiBase = import.meta.env.VITE_API_BASE || '';
   const { data: surahs, isLoading: isSurahsLoading } = useQuery<Surah[]>({
     queryKey: ['/api/surahs'],
+    queryFn: async () => {
+      if (apiBase) {
+        const r = await fetch(`${apiBase}/api/surahs`, { credentials: 'include' });
+        if (!r.ok) throw new Error(await r.text());
+        return await r.json();
+      } else {
+        const r = await axios.get('https://api.alquran.cloud/v1/surah');
+        const d = r.data?.data || [];
+        return d.map((s: any) => ({
+          number: s.number,
+          name: s.name,
+          englishName: s.englishName,
+          englishNameTranslation: s.englishNameTranslation,
+          numberOfAyahs: s.numberOfAyahs,
+          revelationType: s.revelationType,
+        }));
+      }
+    }
   });
 
   const { data: juzIndex } = useQuery<{ number: number; startSurah: number; startAyah: number; endSurah: number; endAyah: number }[]>({
@@ -42,6 +62,96 @@ export default function QuranReader() {
       ? ['/api/surah', selectedSurah, selectedReciter]
       : ['/api/juz', selectedJuz ?? 0, selectedReciter],
     enabled: viewMode === 'surah' ? selectedSurah > 0 : (selectedJuz !== null),
+    queryFn: async ({ queryKey }) => {
+      if (viewMode === 'surah') {
+        const surahNum = selectedSurah;
+        const reciter = selectedReciter;
+        if (apiBase) {
+          const r = await fetch(`${apiBase}/api/surah/${surahNum}/${reciter}`, { credentials: 'include' });
+          if (!r.ok) throw new Error(await r.text());
+          return await r.json();
+        } else {
+          const editions = `quran-uthmani,${reciter},ur.jalandhry,en.sahih`;
+          const r = await axios.get(`https://api.alquran.cloud/v1/surah/${surahNum}/editions/${editions}`);
+          const [arabicData, audioData, urduData, englishData] = r.data.data;
+          return arabicData.ayahs.map((ayah: any, index: number) => ({
+            ayah: {
+              number: ayah.number,
+              numberInSurah: ayah.numberInSurah,
+              text: ayah.text,
+              audio: `https://cdn.islamic.network/quran/audio/128/${reciter}/${ayah.number}.mp3`,
+              surah: {
+                number: arabicData.number,
+                name: arabicData.name,
+                englishName: arabicData.englishName,
+              },
+            },
+            urduTranslation: {
+              text: urduData.ayahs[index]?.text || "",
+              language: "Urdu",
+              translator: "Fateh Muhammad Jalandhry",
+            },
+            englishTranslation: {
+              text: englishData.ayahs[index]?.text || "",
+              language: "English",
+              translator: "Sahih International",
+            },
+          }));
+        }
+      } else {
+        const juzNum = selectedJuz ?? 0;
+        const reciter = selectedReciter;
+        if (apiBase) {
+          const r = await fetch(`${apiBase}/api/juz/${juzNum}/${reciter}`, { credentials: 'include' });
+          if (!r.ok) throw new Error(await r.text());
+          return await r.json();
+        } else {
+          const boundaries: any = {
+            1: { startSurah: 1, startAyah: 1, endSurah: 2, endAyah: 141 },
+            2: { startSurah: 2, startAyah: 142, endSurah: 2, endAyah: 252 },
+            3: { startSurah: 2, startAyah: 253, endSurah: 3, endAyah: 92 },
+            4: { startSurah: 3, startAyah: 92, endSurah: 4, endAyah: 23 },
+            30: { startSurah: 78, startAyah: 1, endSurah: 114, endAyah: 6 },
+          };
+          const b = boundaries[juzNum];
+          const versesAgg: any[] = [];
+          const editions = `quran-uthmani,${reciter},ur.jalandhry,en.sahih`;
+          for (let s = b.startSurah; s <= b.endSurah; s++) {
+            const r = await axios.get(`https://api.alquran.cloud/v1/surah/${s}/editions/${editions}`);
+            const [arabicData, audioData, urduData, englishData] = r.data.data;
+            const startAyah = (s === b.startSurah) ? b.startAyah : 1;
+            const endAyah = (s === b.endSurah) ? b.endAyah : arabicData.numberOfAyahs;
+            for (let idx = startAyah - 1; idx < endAyah; idx++) {
+              const ayah = arabicData.ayahs[idx];
+              versesAgg.push({
+                ayah: {
+                  number: ayah.number,
+                  numberInSurah: ayah.numberInSurah,
+                  text: ayah.text,
+                  audio: `https://cdn.islamic.network/quran/audio/128/${reciter}/${ayah.number}.mp3`,
+                  surah: {
+                    number: arabicData.number,
+                    name: arabicData.name,
+                    englishName: arabicData.englishName,
+                  },
+                },
+                urduTranslation: {
+                  text: urduData.ayahs[idx]?.text || "",
+                  language: "Urdu",
+                  translator: "Fateh Muhammad Jalandhry",
+                },
+                englishTranslation: {
+                  text: englishData.ayahs[idx]?.text || "",
+                  language: "English",
+                  translator: "Sahih International",
+                },
+              });
+            }
+          }
+          return versesAgg;
+        }
+      }
+    }
   });
 
   const [tafseerSurahNumber, setTafseerSurahNumber] = useState<number | null>(null);
@@ -183,6 +293,17 @@ export default function QuranReader() {
                   <Book className="w-4 h-4" />
                   <span className="hidden md:inline">Browse Hadith</span>
                   <span className="md:hidden">Hadith</span>
+                </Button>
+              </Link>
+              <Link href="/tajweed-guide">
+                <Button
+                  variant="outline"
+                  size="default"
+                  data-testid="button-nav-tajweed"
+                  className="gap-2"
+                >
+                  <span className="hidden md:inline">Tajweed Guide</span>
+                  <span className="md:hidden">Tajweed</span>
                 </Button>
               </Link>
               <Link href="/transcribe">

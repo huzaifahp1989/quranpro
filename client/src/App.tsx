@@ -10,6 +10,7 @@ import QuranFollow from "@/pages/QuranFollow";
 import HadithBrowser from "@/pages/HadithBrowser";
 import KidsLearning from "@/pages/KidsLearning";
 import Transcribe from "@/pages/Transcribe";
+import TajweedGuide from "@/pages/TajweedGuide";
 import NotFound from "@/pages/not-found";
 import IMediaCHome from "./pages/imediac/Home";
 import { Services } from "./pages/imediac/Services";
@@ -25,6 +26,7 @@ function AppRoutes() {
       <Route path="/hadith" component={HadithBrowser} />
       <Route path="/kids" component={KidsLearning} />
       <Route path="/transcribe" component={Transcribe} />
+      <Route path="/tajweed-guide" component={TajweedGuide} />
       <Route path="/follow" component={QuranFollow} />
         <Route path="/imediac" component={IMediaCHome} />
       <Route path="/imediac/services" component={Services} />

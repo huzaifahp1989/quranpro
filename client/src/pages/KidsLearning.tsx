@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import axios from "axios";
 import { useQuery } from "@tanstack/react-query";
 import { BookOpen, Play, Pause, RotateCcw, Volume2, Loader2 } from "lucide-react";
 import { Link } from "wouter";
@@ -70,9 +71,46 @@ export default function KidsLearning() {
   const currentSection = learningSections.find(s => s.id === selectedSection);
   const currentSurahNumber = currentSection?.surahs[currentSurahIndex];
 
+  const apiBase = import.meta.env.VITE_API_BASE || '';
   const { data: verses, isLoading } = useQuery<VerseWithTranslations[]>({
     queryKey: ['/api/surah', currentSurahNumber, selectedReciter],
     enabled: !!currentSurahNumber && mainTab === "quran",
+    queryFn: async () => {
+      const surahNum = currentSurahNumber as number;
+      const reciter = selectedReciter;
+      if (apiBase) {
+        const r = await fetch(`${apiBase}/api/surah/${surahNum}/${reciter}`, { credentials: 'include' });
+        if (!r.ok) throw new Error(await r.text());
+        return await r.json();
+      } else {
+        const editions = `quran-uthmani,${reciter},ur.jalandhry,en.sahih`;
+        const r = await axios.get(`https://api.alquran.cloud/v1/surah/${surahNum}/editions/${editions}`);
+        const [arabicData, audioData, urduData, englishData] = r.data.data;
+        return arabicData.ayahs.map((ayah: any, index: number) => ({
+          ayah: {
+            number: ayah.number,
+            numberInSurah: ayah.numberInSurah,
+            text: ayah.text,
+            audio: `https://cdn.islamic.network/quran/audio/128/${reciter}/${ayah.number}.mp3`,
+            surah: {
+              number: arabicData.number,
+              name: arabicData.name,
+              englishName: arabicData.englishName,
+            },
+          },
+          urduTranslation: {
+            text: urduData.ayahs[index]?.text || "",
+            language: "Urdu",
+            translator: "Fateh Muhammad Jalandhry",
+          },
+          englishTranslation: {
+            text: englishData.ayahs[index]?.text || "",
+            language: "English",
+            translator: "Sahih International",
+          },
+        }));
+      }
+    }
   });
 
   const currentVerse = verses?.[currentVerseIndex];
